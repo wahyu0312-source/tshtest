@@ -377,7 +377,7 @@ function debounce(fn, ms = 150) {
   };
     // ...
   initWeather(); // ✅ tampilkan kota & suhu
-});
+};
 
 }
 
