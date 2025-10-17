@@ -86,8 +86,9 @@ function jsonp(action, params={}){
     s.src = url; document.head.appendChild(s);
   });
 }
+// ==== ganti apiPost agar selalu lempar error kalau data null/invalid ====
 async function apiPost(action, body){
-  const payload = {action, ...(API_KEY?{apiKey:API_KEY}:{}) , ...body};
+  const payload = { action, ...(API_KEY?{apiKey:API_KEY}:{}) , ...body };
   try{
     const res = await fetch(resolveApiBase(), {
       method:'POST',
@@ -96,13 +97,65 @@ async function apiPost(action, body){
       body: toQS(payload),
       cache:'no-store',
     });
-    const txt=await res.text(); const j=JSON.parse(txt);
-    if(!j.ok) throw new Error(j.error||'API error'); return j.data;
+    const txt = await res.text();
+    let j; try{ j = JSON.parse(txt); }catch{ throw new Error('Invalid server response'); }
+    if (!j || j.ok === false) throw new Error(j?.error || 'API error');
+    if (j.data == null || (typeof j.data === 'object' && Object.keys(j.data).length === 0)) {
+      throw new Error('Empty server data');
+    }
+    return j.data;
   }catch(err){
+    // fallback JSONP
     console.warn('POST fell back to JSONP:', err);
-    return jsonp(action, payload);
+    const data = await jsonp(action, payload);
+    if (data == null) throw new Error('Empty server data');
+    return data;
   }
 }
+
+// ==== ganti onLogin: validasi input + guard ketika data tidak lengkap ====
+async function onLogin(){
+  const u = $('#inUser') ? $('#inUser').value.trim() : '';
+  const p = $('#inPass') ? $('#inPass').value.trim() : '';
+  if(!u || !p){ alert('ユーザー名とパスワードを入力してください'); return; }
+  try{
+    const r = await apiPost('login', { username:u, password:p });
+    // Guard: pastikan properti penting ada
+    if (!r || !r.username) throw new Error('ログイン情報が無効です（username 不明）');
+    SESSION = {
+      username: r.username,
+      full_name: r.full_name || r.name || r.username,
+      department: r.department || '',
+      role: r.role || 'member',
+      token: r.token || ''
+    };
+    localStorage.setItem('erp_session', JSON.stringify(SESSION));
+    enter();
+  }catch(e){
+    alert(e.message || e);
+  }
+}
+
+// ==== patch kecil di enter(): jangan akses field jika null ====
+function enter(){
+  const ui = $('#userInfo');
+  if (ui && SESSION) {
+    const nm = SESSION.full_name || SESSION.username || '';
+    const dp = SESSION.department || '';
+    ui.textContent = dp ? `${nm}・${dp}` : nm;
+  }
+  ['btnToDash','btnToSales','btnToPlan','btnToShip','btnToInvPage','btnToFinPage','btnToInvoice','btnToCharts']
+    .forEach(id=>{ const el=$('#'+id); if(el) el.classList.remove('hidden'); });
+  const dd = $('#ddSetting'); if(dd) dd.classList.remove('hidden');
+
+  if(!(SESSION.role==='admin' || SESSION.department==='生産技術')){
+    const miAddUser=$('#miAddUser'); if(miAddUser) miAddUser.classList.add('hidden');
+  }
+  show('pageDash');
+  loadMasters();
+  requestIdleCallback(()=> { refreshAll(); populateChubanFromSales(); }, {timeout:1000});
+}
+
 async function apiGet(params, {swrKey=null, revalidate=true} = {}){
   const final = {...params, ...(API_KEY?{apiKey:API_KEY}:{})};
   const url=resolveApiBase()+'?'+new URLSearchParams(final).toString();
