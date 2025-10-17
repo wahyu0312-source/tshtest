@@ -269,8 +269,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // ...
 });
 
-  };
-  Object.keys(map).forEach(id=>{ const el=$('#'+id); if(el) el.onclick = map[id]; });
+ 
 
   // Settings
   const miStationQR = $('#miStationQR');
