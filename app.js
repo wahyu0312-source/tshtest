@@ -249,6 +249,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
     btnToFinPage: ()=> { show('pageFinished'); renderFinished(); },
     btnToInvoice: ()=> show('pageInvoice'),
     btnToCharts: ()=> { show('pageCharts'); ensureChartsLoaded(); }
+      // 注番 source selector (plan)
+  initChubanSelector();
+
+  // --- TAMBAHKAN BARIS INI DI SINI ---
+  initWeather();
+});
+
   };
   Object.keys(map).forEach(id=>{ const el=$('#'+id); if(el) el.onclick = map[id]; });
 
@@ -369,17 +376,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 /* ===== Small utils ===== */
 /* ===== Small utils ===== */
+/* ===== Small utils ===== */
 function debounce(fn, ms = 150) {
   let t = null;
   return (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn.apply(null, args), ms);
   };
-    // ...
-  initWeather(); // ✅ tampilkan kota & suhu
-};
-
 }
+
 
 function show(id){
   const ids=['authView','pageDash','pageSales','pagePlan','pageShip','pageInvoice','pageCharts','pageInventory','pageFinished'];
