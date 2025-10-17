@@ -626,49 +626,62 @@ async function exportSalesCSV(){ const rows=await apiGet({action:'listSales'},{s
 
 
 /* ===== Plan CRUD ===== */
-aasync function createOrderUI(){
-  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
-  const p={
-    '得意先': $('#c_tokui')?.value.trim() || '',
-    '製番号': $('#c_sei')?.value.trim() || '',
-    '品名':   $('#c_hinmei')?.value.trim() || '',
-    '品番':   $('#c_hinban')?.value.trim() || '',
-    '図番':   $('#c_zuban')?.value.trim() || '',
-    '数量':   Number($('#c_qty')?.value || 0) || 0
+/* ===== Plan CRUD ===== */
+async function createOrderUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) {
+    alert('権限不足'); return;
+  }
+  const p = {
+    '得意先': ($('#c_tokui')?.value || '').trim(),
+    '製番号': ($('#c_sei')?.value || '').trim(),
+    '品名'  : ($('#c_hinmei')?.value || '').trim(),
+    '品番'  : ($('#c_hinban')?.value || '').trim(),
+    '図番'  : ($('#c_zuban')?.value || '').trim(),
+    '数量'  : Number($('#c_qty')?.value || 0) || 0
   };
-  const editingPoEl=$('#c_po'); const editingPo=editingPoEl?editingPoEl.value.trim():'';
+  const editingPoEl = $('#c_po');
+  const editingPo = editingPoEl ? editingPoEl.value.trim() : '';
   try{
-    if(editingPo){ await apiPost('updateOrder',{po_id:editingPo,updates:p,user:SESSION}); alert('編集保存しました'); }
-    else{
-      const r=await apiPost('createOrder',{payload:p,user:SESSION});
-      alert('作成: '+r.po_id); if(editingPoEl) editingPoEl.value=r.po_id;
+    if (editingPo){
+      await apiPost('updateOrder', { po_id: editingPo, updates: p, user: SESSION });
+      alert('編集保存しました');
+    } else {
+      const r = await apiPost('createOrder', { payload: p, user: SESSION });
+      alert('作成: ' + r.po_id);
+      if (editingPoEl) editingPoEl.value = r.po_id;
     }
     refreshAll();
-  }catch(e){ alert(e.message||e); }
+  }catch(e){ alert(e.message || e); }
 }
 
 async function loadOrderForEdit(){
-  const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
-  if(!po) return alert('注番入力');
+  const poEl = $('#c_po'); const po = poEl ? poEl.value.trim() : '';
+  if(!po){ alert('注番入力'); return; }
   try{
-    const o=await apiGet({action:'ticket',po_id:po});
-    const set=(id,v)=>{ const el=$(id); if(el) el.value=v||''; };
-    set('#c_tokui',o['得意先']);
-    set('#c_sei',o['製番号']);
+    const o = await apiGet({action:'ticket', po_id:po});
+    const set = (sel, v)=>{ const el=$(sel); if(el) el.value = v ?? ''; };
+    set('#c_tokui', o['得意先']);
+    set('#c_sei',   o['製番号']);
     set('#c_hinmei',o['品名']);
     set('#c_hinban',o['品番']);
-    set('#c_zuban',o['図番']);
-    set('#c_qty', o['数量']||0);
+    set('#c_zuban', o['図番']);
+    set('#c_qty',   o['数量'] || 0);
     alert('読み込み完了。');
-  }catch(e){ alert(e.message||e); }
+  }catch(e){ alert(e.message || e); }
 }
 
 async function deleteOrderUI(){
-  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
-  const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
-  if(!po) return alert('注番入力'); if(!confirm('削除しますか？')) return;
-  try{ const r=await apiPost('deleteOrder',{po_id:po,user:SESSION}); alert('削除:'+r.deleted); refreshAll(); }
-  catch(e){ alert(e.message||e); }
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) {
+    alert('権限不足'); return;
+  }
+  const poEl = $('#c_po'); const po = poEl ? poEl.value.trim() : '';
+  if(!po){ alert('注番入力'); return; }
+  if(!confirm('削除しますか？')) return;
+  try{
+    const r = await apiPost('deleteOrder', { po_id: po, user: SESSION });
+    alert('削除:' + r.deleted);
+    refreshAll();
+  }catch(e){ alert(e.message || e); }
 }
 
 /* ===== Ship CRUD ===== */
