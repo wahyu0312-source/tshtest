@@ -876,18 +876,80 @@ function fillChartYearSelector(){
 }
 async function renderCharts(){
   try{
-    const d=await apiGet({action:'charts'},{swrKey:'charts'});
-    const year=d.year|| (new Date()).getFullYear();
-    if($('#chartYear')) $('#chartYear').value=year;
-    const ms=(arr)=>({labels:['1','2','3','4','5','6','7','8','9','10','11','12'], datasets:[{label:'数量', data:arr}]});
-    drawBar('chMonthly', ms(d.perMonth));
-    drawPie('chCustomer', d.perCust||{});
-    drawPie('chStock', d.stockBuckets||{});
-    drawBar('chWipProc', {labels:Object.keys(d.wipByProcess||{}), datasets:[{label:'点数', data:Object.values(d.wipByProcess||{})}]});
-    drawBar('chSales', ms(d.salesPerMonth||[]));
-    drawBar('chPlan', ms(d.planPerMonth||[]));
-  }catch(e){ console.warn(e); }
+    const ySel = document.getElementById('chartYear');
+    const yearHint = ySel && ySel.value ? Number(ySel.value) : null;
+
+    // Ambil agregasi dari backend
+    const data = await apiGet({action:'charts', year: yearHint||''}, {swrKey:'charts'+(yearHint||'')});
+
+    // Siapkan label bulan
+    const mlabels = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+
+    // CH1: Monthly shipments
+    drawBar('chMonthly', mlabels, data.perMonth || [], '月別出荷数量');
+
+    // CH2: Pie by customer
+    const custLabels = Object.keys(data.perCust||{});
+    const custValues = custLabels.map(k=> data.perCust[k]);
+    drawPie('chCustomer', custLabels, custValues, '得意先別出荷');
+
+    // CH3: Stock buckets
+    const sbLabels = Object.keys(data.stockBuckets||{});
+    const sbValues = sbLabels.map(k=> data.stockBuckets[k]);
+    drawPie('chStock', sbLabels, sbValues, '在庫区分');
+
+    // CH4: WIP per process
+    const wipLabels = Object.keys(data.wipByProcess||{});
+    const wipValues = wipLabels.map(k=> data.wipByProcess[k]);
+    drawBar('chWipProc', wipLabels, wipValues, '工程内WIP');
+
+    // CH5: Sales per month (受注数)
+    drawBar('chSales', mlabels, data.salesPerMonth || [], '営業 受注数');
+
+    // CH6: Plan created per month (生産計画)
+    drawBar('chPlan', mlabels, data.planPerMonth || [], '生産計画 作成数');
+  }catch(e){
+    console.error('Charts fail:', e);
+    showApiError('charts', e);
+  }
 }
+
+function ensureChartsLoaded(){
+  if (typeof renderCharts === 'function') renderCharts();
+}
+
+function drawBar(canvasId, labels, values, label){
+  const ctx = document.getElementById(canvasId);
+  if(!ctx) return;
+  if(ctx._chart){ ctx._chart.destroy(); }
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label, data: values }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+  });
+}
+function drawPie(canvasId, labels, values, label){
+  const ctx = document.getElementById(canvasId);
+  if(!ctx) return;
+  if(ctx._chart){ ctx._chart.destroy(); }
+  ctx._chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ label, data: values }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{ legend:{ position:'bottom' } } }
+  });
+}
+
+function fillChartYearSelector(){
+  const sel = document.getElementById('chartYear');
+  if(!sel) return;
+  const y = new Date().getFullYear();
+  sel.innerHTML = '';
+  for(let i=y-4;i<=y;i++){
+    const o=document.createElement('option'); o.value=i; o.textContent=i+'年'; if(i===y) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
 function drawBar(id, data){
   const ctx=document.getElementById(id); if(!ctx) return;
   new Chart(ctx, {type:'bar', data, options:{responsive:true, maintainAspectRatio:false, animation:{duration:300}}});
