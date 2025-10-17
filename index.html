@@ -428,12 +428,44 @@
     })();
   </script>
 
-  <!-- ===== Charts helper (dipertahankan; label disesuaikan 注番) ===== -->
-  <script>
-    (function(){
-      // ... (helper sama; tidak diubah selain teks default) ...
-      // (Konten helper ini tetap seperti sebelumnya untuk menjaga kompatibilitas dan tidak memanjang di sini)
-    })();
-  </script>
+  <!-- ===== Charts helper (penuh; tanpa pemotongan) ===== -->
+<script>
+(function(){
+  // Helper kecil untuk navigasi ke halaman Charts + render ulang
+  function show(id){
+    const ids=['authView','pageDash','pageSales','pagePlan','pageShip','pageInvoice','pageCharts','pageInventory','pageFinished'];
+    ids.forEach(x=>{ const el=document.getElementById(x); if(el) el.classList.add('hidden'); });
+    const target=document.getElementById(id);
+    if(target) target.classList.remove('hidden');
+  }
+
+  function ensureChartsLoaded(){
+    if (typeof window.renderCharts === 'function') {
+      window.renderCharts();
+    }
+  }
+
+  // Tombol navbar 統計 → buka halaman + render chart
+  document.addEventListener('DOMContentLoaded', () => {
+    const btnCharts = document.getElementById('btnToCharts');
+    if (btnCharts) {
+      btnCharts.classList.remove('hidden');
+      btnCharts.addEventListener('click', () => {
+        show('pageCharts');
+        ensureChartsLoaded();
+      });
+    }
+
+    // Kalau page Charts sudah terlihat (mis. reload saat posisi di Charts)
+    const chartsVisible = !document.getElementById('pageCharts')?.classList.contains('hidden');
+    if (chartsVisible) ensureChartsLoaded();
+  });
+
+  // Catatan:
+  // - Semua pengambilan data chart memakai window.renderCharts() (didefinisikan di app.js).
+  // - Label/teks yang menyinggung PO/SO sudah diganti ke 注番 di UI.
+})();
+</script>
+
 </body>
 </html>
