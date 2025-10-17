@@ -1081,7 +1081,7 @@ function handleImport(e, type){
   const isCSV = /\.csv$/i.test(file.name);
   const reader = new FileReader();
 
-  reader.onload = async (ev)=>{
+  reader.onload = async (ev) => {
     const data = ev.target.result;
     let rows = [];
 
@@ -1090,17 +1090,31 @@ function handleImport(e, type){
       const lines = text.split(/\r?\n/).filter(Boolean);
       const head = (lines.shift() || '').split(',').map(h => h.replace(/^"|"$/g,''));
       rows = lines.map(line=>{
-        // aman untuk CSV dengan quotes
         const cols = line.match(/([^",\s]+|"[^"]*")(?=\s*,|\s*$)/g)?.map(x=> x.replace(/^"|"$/g,'')) || [];
-        const o = {}; head.forEach((h,i)=> o[h] = cols[i]); 
+        const o = {}; head.forEach((h,i)=> o[h] = cols[i]);
         return o;
       });
     } else {
-      // ✅ ganti: pakai ArrayBuffer untuk XLSX
       const wb = XLSX.read(new Uint8Array(data), { type:'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(ws);
     }
+
+    try{
+      if(type==='sales')  await apiPost('importSales',     { rows, user:SESSION, mode:'upsert' });
+      if(type==='orders') await apiPost('importOrders',    { rows, user:SESSION, mode:'upsert' });
+      if(type==='ship')   await apiPost('importShipments', { rows, user:SESSION, mode:'upsert' });
+      alert('インポート成功'); refreshAll(true); populateChubanFromSales();
+    }catch(err){ showApiError('import-'+type, err); }
+  };
+
+  if (isCSV) {
+    reader.readAsText(file, 'utf-8');
+  } else {
+    reader.readAsArrayBuffer(file); // penting: bukan readAsBinaryString
+  }
+} // ⬅️ pastikan ini ada
+
 
     try{
       if(type==='sales')  await apiPost('importSales',     { rows, user:SESSION, mode:'upsert' });
