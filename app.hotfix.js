@@ -7,7 +7,7 @@
   window.api = async function api(action, opts={}){
     const API_BASE = (window.API_BASE || localStorage.getItem('API_BASE') || '').trim();
     if(!API_BASE){
-      throw new Error('API_BASE belum diset. Setel lewat localStorage.setItem("API_BASE","<GAS WebApp URL>")');
+      throw new Error('API_BASE belum diset. Setel lewat localStorage.setItem("API_BASE","https://script.google.com/macros/s/AKfycbyqIp-Y5xuWH6FXXqZCgqL4BFwuPfFQ_YW6KWvXpJo1-eA9zB3Uhs_p9hcjUryR8Q2w/exec")');
     }
     const method = (opts.method || 'GET').toUpperCase();
     const headers = {'Content-Type':'application/json'};
