@@ -207,6 +207,35 @@ function tableSkeleton(tbody, rows=7, cols=8){
   tbody.innerHTML=''; tbody.appendChild(frag);
 }
 function clearSkeleton(tbody){ if(tbody) tbody.innerHTML=''; }
+// === Weather with city name (Open-Meteo, no key) ===
+async function initWeather(){
+  const elPlace = document.getElementById('wxPlace') || document.querySelector('[data-wx="place"]');
+  const elTemp  = document.getElementById('wxTemp')  || document.querySelector('[data-wx="temp"]');
+  if((!elPlace && !elTemp) || !('geolocation' in navigator)) return;
+
+  function setUI(city, temp){
+    if(elPlace) elPlace.textContent = city || '現在地';
+    if(elTemp)  elTemp.textContent  = (temp!=null ? Math.round(temp)+'℃' : '--');
+  }
+
+  try{
+    const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
+    const { latitude, longitude } = pos.coords;
+
+    // current temperature
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`).then(r=>r.json());
+    const temp = wx && wx.current ? wx.current.temperature_2m : null;
+
+    // reverse geocoding for city name (ja)
+    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`).then(r=>r.json());
+    const city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || '現在地') : '現在地';
+
+    setUI(city, temp);
+  }catch(e){
+    console.warn('weather:', e);
+    setUI('現在地', null);
+  }
+}
 
 /* ===== Boot ===== */
 window.addEventListener('DOMContentLoaded', ()=>{
@@ -346,6 +375,10 @@ function debounce(fn, ms = 150) {
     clearTimeout(t);
     t = setTimeout(() => fn.apply(null, args), ms);
   };
+    // ...
+  initWeather(); // ✅ tampilkan kota & suhu
+});
+
 }
 
 function show(id){
