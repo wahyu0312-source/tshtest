@@ -1074,9 +1074,10 @@ function exportInvoiceCSV(){
   setTimeout(()=> URL.revokeObjectURL(url), 1000);
 }
 
+// ===== Import / Export =====
 function handleImport(e, type){
   const file = e.target.files && e.target.files[0];
-  if(!file) return;
+  if (!file) return;
 
   const isCSV = /\.csv$/i.test(file.name);
   const reader = new FileReader();
@@ -1095,39 +1096,30 @@ function handleImport(e, type){
         return o;
       });
     } else {
+      // XLSX via ArrayBuffer (bukan binaryString)
       const wb = XLSX.read(new Uint8Array(data), { type:'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(ws);
     }
 
-    try{
-      if(type==='sales')  await apiPost('importSales',     { rows, user:SESSION, mode:'upsert' });
-      if(type==='orders') await apiPost('importOrders',    { rows, user:SESSION, mode:'upsert' });
-      if(type==='ship')   await apiPost('importShipments', { rows, user:SESSION, mode:'upsert' });
-      alert('インポート成功'); refreshAll(true); populateChubanFromSales();
-    }catch(err){ showApiError('import-'+type, err); }
+    try {
+      if (type === 'sales')  await apiPost('importSales',     { rows, user: SESSION, mode: 'upsert' });
+      if (type === 'orders') await apiPost('importOrders',    { rows, user: SESSION, mode: 'upsert' });
+      if (type === 'ship')   await apiPost('importShipments', { rows, user: SESSION, mode: 'upsert' });
+      alert('インポート成功'); 
+      refreshAll(true); 
+      populateChubanFromSales();
+    } catch (err) { 
+      showApiError('import-' + type, err); 
+    }
   };
 
   if (isCSV) {
     reader.readAsText(file, 'utf-8');
   } else {
-    reader.readAsArrayBuffer(file); // penting: bukan readAsBinaryString
+    reader.readAsArrayBuffer(file);
   }
-} // ⬅️ pastikan ini ada
+} // ⬅️ pastikan kurung penutup ini ada; TIDAK ada "else reader.readAsBinaryString(...)";
 
-
-    try{
-      if(type==='sales')  await apiPost('importSales',     { rows, user:SESSION, mode:'upsert' });
-      if(type==='orders') await apiPost('importOrders',    { rows, user:SESSION, mode:'upsert' });
-      if(type==='ship')   await apiPost('importShipments', { rows, user:SESSION, mode:'upsert' });
-      alert('インポート成功');
-      refreshAll(true); 
-      populateChubanFromSales();
-    }catch(err){
-      showApiError('import-'+type, err);
-    }
-  };
-
-  if (isCSV) reader.readAsText(file, 'utf-8');
-  else reader.readAsArrayBuffer(file);  // ✅ ini pengganti binaryString
-}
+// ===== (fungsi berikutnya mulai di sini, mis. Charts) =====
+function ensureChartsLoaded(){ renderCharts().catch(console.warn); }
