@@ -385,25 +385,42 @@
 
   <!-- Cuaca (dipertahankan) -->
   <script>
-    (async function weatherInit(){
-      const elCity = document.getElementById('wxCity');
-      const elTemp = document.getElementById('wxTemp');
-      const elIcon = document.getElementById('wxIcon');
-      const svg = parts => `<svg viewBox="0 0 24 24" class="wx-ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${parts}</g></svg>`;
-      const ICONS = {
-        sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
-        cloud: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 8H8a4 4 0 0 1-2-3"/>')
-      };
+  (function weatherInit(){
+    const elCity = document.getElementById('wxCity');
+    const elTemp = document.getElementById('wxTemp');
+    const elIcon = document.getElementById('wxIcon');
+    const svg = parts => `<svg viewBox="0 0 24 24" class="wx-ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${parts}</g></svg>`;
+    const ICONS = {
+      sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+      cloud: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 8H8a4 4 0 0 1-2-3"/>')
+    };
+
+    async function fetchWx(lat, lon, label){
       try{
-        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.68&longitude=139.76&current_weather=true&timezone=auto',{cache:'no-store'});
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`,{cache:'no-store'});
         const j = await r.json(); const cw = j.current_weather||{};
-        elCity.textContent = '東京';
+        elCity.textContent = label || `${lat.toFixed(2)},${lon.toFixed(2)}`;
         elTemp.textContent = (Math.round(cw.temperature)||'--') + '℃';
         elIcon.innerHTML = ICONS.sun;
       }catch{
-        elCity.textContent='東京'; elTemp.textContent='--℃';
+        elCity.textContent = label || '---';
+        elTemp.textContent = '--℃';
+        elIcon.innerHTML = ICONS.cloud;
       }
-    })();
-  </script>
+    }
+
+    // Minta lokasi; kalau ditolak → fallback Tokyo
+    if (navigator.geolocation) {
+      const opt = { enableHighAccuracy:false, maximumAge:600000, timeout:5000 };
+      navigator.geolocation.getCurrentPosition(
+        pos => fetchWx(pos.coords.latitude, pos.coords.longitude, '現在地'),
+        _   => fetchWx(35.68,139.76,'東京')
+      );
+    } else {
+      fetchWx(35.68,139.76,'東京');
+    }
+  })();
+</script>
+
 </body>
 </html>
