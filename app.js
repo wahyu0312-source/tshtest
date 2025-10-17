@@ -339,7 +339,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
 });
 
 /* ===== Small utils ===== */
-function debounce(fn, ms=150){ let t=null; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,args), ms); }; }
+/* ===== Small utils ===== */
+function debounce(fn, ms = 150) {
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(null, args), ms);
+  };
+}
+
 function show(id){
   const ids=['authView','pageDash','pageSales','pagePlan','pageShip','pageInvoice','pageCharts','pageInventory','pageFinished'];
   ids.forEach(x=>{ const el=document.getElementById(x); if(el) el.classList.add('hidden'); });
