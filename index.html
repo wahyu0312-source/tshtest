@@ -5,21 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>東京精密発條株式会社システム</title>
   <link rel="icon" href="assets/tsh.png">
-  <!-- Font Awesome (SRI dihapus agar tidak diblokir) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
-  <!-- Charts & QR -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- SheetJS for Excel parsing -->
   <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <!-- App -->
   <script defer src="app.js"></script>
-  <script src="app.hotfix.js"></script>
-
-  <!-- ====== Minimal styling (cuaca) + badge OK/NG ====== -->
+  <script defer src="app.hotfix.js"></script>
   <style>
     .wx-pill{ display:inline-flex;align-items:center;gap:.6rem; padding:.5rem .8rem;border-radius:999px; border:1px solid rgba(0,0,0,.08); background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%); color:#0f172a; box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff; min-height:40px; max-width:60vw; }
     .wx-city{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -27,23 +20,19 @@
     .wx-ico{width:22px;height:22px;display:inline-block}
     .wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
     @media (max-width:760px){ .wx-pill{order:-1} }
-
-    /* (ADD) badge kecil OK/NG per 注番 (untuk kolom 工程 di tabel) */
     .okng-inline{display:flex;gap:.35rem;margin-top:.25rem;flex-wrap:wrap}
     .tag-ok{border-radius:8px;padding:.1rem .4rem;background:#eaffea;border:1px solid #b7efb7}
     .tag-ng{border-radius:8px;padding:.1rem .4rem;background:#ffecec;border:1px solid #ffb3b3}
   </style>
 </head>
 <body>
-
-  <!-- ================= NAV ================= -->
+  <!-- NAV -->
   <nav class="nav">
     <div class="nav-left">
       <img src="assets/tsh.png" class="logo" alt="">
       <span class="brand">東京精密発條株式会社システム</span>
     </div>
 
-    <!-- Weather pill -->
     <div id="weather" class="wx-pill" aria-live="polite" title="現在の天気">
       <span id="wxCity" class="wx-city">取得中…</span>
       <span class="wx-dot" aria-hidden="true"></span>
@@ -52,6 +41,7 @@
     </div>
 
     <div class="nav-right">
+      <!-- semua tombol navbar mulai dalam keadaan hidden; akan di-unhide setelah login di enter() -->
       <button id="btnToDash" class="btn ghost hidden"><i class="fa-solid fa-gauge"></i> ダッシュボード</button>
       <button id="btnToSales" class="btn ghost hidden"><i class="fa-regular fa-handshake"></i> 受注（営業）</button>
       <button id="btnToPlan" class="btn ghost hidden"><i class="fa-solid fa-list-check"></i> 生産計画</button>
@@ -61,26 +51,17 @@
       <button id="btnToInvoice" class="btn ghost hidden"><i class="fa-regular fa-file-lines"></i> 請求書</button>
       <button id="btnToCharts" class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
 
-      <!-- ======== SETTINGS DROPDOWN ======== -->
       <details class="dropdown-inline hidden" id="ddSetting">
         <summary class="btn ghost">
           <i class="fa-solid fa-gear"></i> 設定
           <i class="fa-solid fa-caret-down caret" style="margin-left:.25rem"></i>
         </summary>
         <div class="menu right">
-          <button id="miStationQR" class="menu-item">
-            <i class="fa-solid fa-qrcode"></i> 工程QR
-          </button>
-          <button id="miAddUser" class="menu-item">
-            <i class="fa-solid fa-user-plus"></i> ユーザー追加
-          </button>
-          <button id="miChangePass" class="menu-item">
-            <i class="fa-solid fa-key"></i> パス変更
-          </button>
+          <button id="miStationQR" class="menu-item"><i class="fa-solid fa-qrcode"></i> 工程QR</button>
+          <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button>
+          <button id="miChangePass" class="menu-item"><i class="fa-solid fa-key"></i> パス変更</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:.35rem 0">
-          <button id="btnLogout" class="menu-item">
-            <i class="fa-solid fa-right-from-bracket"></i> ログアウト
-          </button>
+          <button id="btnLogout" class="menu-item"><i class="fa-solid fa-right-from-bracket"></i> ログアウト</button>
         </div>
       </details>
       <span id="userInfo" class="muted"></span>
@@ -89,7 +70,7 @@
 
   <a class="corner-brand" href="#" aria-label="Design credit">Design by Wahyu</a>
 
-  <!-- ================= AUTH ================= -->
+  <!-- AUTH -->
   <main id="authView" class="container">
     <section class="card card-tight">
       <h2><i class="fa-solid fa-right-to-bracket"></i> ログイン</h2>
@@ -117,9 +98,8 @@
     </section>
   </main>
 
-  <!-- ================= DASHBOARD ================= -->
+  <!-- DASHBOARD -->
   <main id="pageDash" class="container hidden">
-
     <section class="card" id="ordersSection">
       <header class="row-between">
         <h3><i class="fa-solid fa-clipboard-list"></i> オーダー一覧</h3>
@@ -163,14 +143,13 @@
         <div class="tile">
           <div class="muted s">工程内滞留（現在位置）</div>
           <div id="gridProc" class="grid grid-chips"></div>
-          <!-- (ADD) OK/NG per 工程 -->
           <div id="process-okng"></div>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- ================ SALES ================ -->
+  <!-- SALES -->
   <main id="pageSales" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -185,7 +164,6 @@
         </div>
       </header>
       <div class="grid">
-        <!-- SO → 注番 (編集用) -->
         <input id="so_id" placeholder="注番（編集用）">
         <input id="so_date" type="date" placeholder="受注日">
         <input id="so_cust" placeholder="得意先" list="dl_tokui">
@@ -215,7 +193,7 @@
     </section>
   </main>
 
-  <!-- ================ PLAN ================ -->
+  <!-- PLAN -->
   <main id="pagePlan" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -230,7 +208,7 @@
         </div>
       </header>
 
-      <!-- 注番 input with source selector -->
+      <!-- 注番 input: 受注選択 / 手入力 / 空欄 -->
       <div class="grid">
         <div style="display:flex;gap:.5rem;align-items:center">
           <select id="poSource" class="input" style="width:180px">
@@ -258,7 +236,7 @@
     </section>
   </main>
 
-  <!-- ================ SHIP ================ -->
+  <!-- SHIP -->
   <main id="pageShip" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -286,7 +264,7 @@
     </section>
   </main>
 
-  <!-- ================ 在庫 ================ -->
+  <!-- 在庫 -->
   <main id="pageInventory" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -304,7 +282,7 @@
     </section>
   </main>
 
-  <!-- ================ 完成品一覧 ================ -->
+  <!-- 完成品一覧 -->
   <main id="pageFinished" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -322,7 +300,7 @@
     </section>
   </main>
 
-  <!-- ================ INVOICE ================ -->
+  <!-- 請求書 -->
   <main id="pageInvoice" class="container hidden">
     <section class="card">
       <header class="row-between"><h3><i class="fa-regular fa-file-lines"></i> 請求書作成</h3></header>
@@ -359,7 +337,7 @@
     </section>
   </main>
 
-  <!-- ================ 統計 (Charts) ================ -->
+  <!-- 統計 -->
   <main id="pageCharts" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -384,7 +362,7 @@
     </section>
   </main>
 
-  <!-- ================ Dialogs ================ -->
+  <!-- DIALOGS -->
   <dialog id="dlgStationQR" class="paper">
     <div class="body"><h3>工程QR（現場掲示用）</h3><p class="muted s">フォーマット: <code>ST:工程名</code></p><div id="qrWrap" class="grid"></div></div>
     <footer class="row-end"><button class="btn" onclick="document.getElementById('dlgStationQR').close()">閉じる</button></footer>
@@ -405,7 +383,7 @@
   <dialog id="dlgTicket"  class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgTicket').close()">閉じる</button></footer></dialog>
   <dialog id="dlgShip"    class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgShip').close()">閉じる</button></footer></dialog>
 
-  <!-- ===== Script Cuaca (dipertahankan) ===== -->
+  <!-- Cuaca (dipertahankan) -->
   <script>
     (async function weatherInit(){
       const elCity = document.getElementById('wxCity');
@@ -427,45 +405,5 @@
       }
     })();
   </script>
-
-  <!-- ===== Charts helper (penuh; tanpa pemotongan) ===== -->
-<script>
-(function(){
-  // Helper kecil untuk navigasi ke halaman Charts + render ulang
-  function show(id){
-    const ids=['authView','pageDash','pageSales','pagePlan','pageShip','pageInvoice','pageCharts','pageInventory','pageFinished'];
-    ids.forEach(x=>{ const el=document.getElementById(x); if(el) el.classList.add('hidden'); });
-    const target=document.getElementById(id);
-    if(target) target.classList.remove('hidden');
-  }
-
-  function ensureChartsLoaded(){
-    if (typeof window.renderCharts === 'function') {
-      window.renderCharts();
-    }
-  }
-
-  // Tombol navbar 統計 → buka halaman + render chart
-  document.addEventListener('DOMContentLoaded', () => {
-    const btnCharts = document.getElementById('btnToCharts');
-    if (btnCharts) {
-      btnCharts.classList.remove('hidden');
-      btnCharts.addEventListener('click', () => {
-        show('pageCharts');
-        ensureChartsLoaded();
-      });
-    }
-
-    // Kalau page Charts sudah terlihat (mis. reload saat posisi di Charts)
-    const chartsVisible = !document.getElementById('pageCharts')?.classList.contains('hidden');
-    if (chartsVisible) ensureChartsLoaded();
-  });
-
-  // Catatan:
-  // - Semua pengambilan data chart memakai window.renderCharts() (didefinisikan di app.js).
-  // - Label/teks yang menyinggung PO/SO sudah diganti ke 注番 di UI.
-})();
-</script>
-
 </body>
 </html>
