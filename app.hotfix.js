@@ -10,20 +10,19 @@
     return Object.keys(obj||{}).map(k => encodeURIComponent(k)+'='+encodeURIComponent(obj[k]??'')).join('&');
   }
   async function apiCall(action, opts={}){
-    const API_BASE = (window.API_BASE || localStorage.getItem('API_BASE') || '').trim();
-    if(!API_BASE) throw new Error('API_BASE belum diset.');
+    const API_BASE = (window.API_BASE || localStorage.getItem('API_BASE') || '').trim() || "https://script.google.com/macros/s/AKfycbyqIp-Y5xuWH6FXXqZCgqL4BFwuPfFQ_YW6KWvXpJo1-eA9zB3Uhs_p9hcjUryR8Q2w/exec";
 
     let url = API_BASE + '?action=' + encodeURIComponent(action);
     const method = (opts.method||'GET').toUpperCase();
 
-    let fetchOpts = { method };
+    let fetchOpts = { method, mode:'cors' };
     if(method === 'GET'){
       const p = opts.params || {};
       const extra = toQS(p);
       if(extra) url += '&' + extra;
-      // penting: JANGAN set header Content-Type pada GET (hindari preflight)
+      // GET: tanpa Content-Type -> hindari preflight
     }else{
-      // kirim sebagai x-www-form-urlencoded -> tidak preflight
+      // POST urlencoded -> hindari preflight
       const body = toQS(opts.body||{});
       fetchOpts.headers = {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'};
       fetchOpts.body = body;
@@ -37,7 +36,6 @@
       const t = await res.text().catch(()=> '');
       throw new Error('HTTP '+res.status+' – '+t);
     }
-    // Gas kirim JSON
     let json;
     try{ json = await res.json(); }
     catch(e){ const raw=await res.text().catch(()=> ''); throw new Error('Invalid response. Raw: '+raw); }
@@ -84,7 +82,7 @@
 
   async function openTicketForCurrentPO(){
     const po = STATE.currentPO;
-    if(!po) throw new Error('PO tidak ditemukan dari baris order.');
+    if(!po) throw new Error('注番が見つかりません。');
     await apiCall('ticket',{method:'GET',params:{po_id:po}});
     if(typeof window.openTicketDialog==='function') return window.openTicketDialog(po);
     alert('現品票を取得しました: '+po);
@@ -103,10 +101,10 @@
   // ---------- Manual 工程更新 (PO otomatis + OK/NG) ----------
   window.manualUpdateProcess = async function(){
     const po = STATE.currentPO;
-    if(!po){ alert('Pilih order dulu: klik tombol 更新 pada baris item, lalu buka manual更新.'); return; }
+    if(!po){ alert('先にオーダー行の「更新」をクリックして注番を選択してください。'); return; }
     const pill = q('[data-proc-pill].active');
     const proc = pill?.dataset?.proc || pill?.textContent?.trim();
-    if(!proc){ alert('Silakan pilih 工程 terlebih dahulu.'); return; }
+    if(!proc){ alert('工程を選択してください'); return; }
     const ok = Number((q('#manual-ok')?.value||0));
     const ng = Number((q('#manual-ng')?.value||0));
     await apiCall('updateProcess',{method:'POST',body:{po_id:po,next_process:proc,ok_qty:ok,ng_qty:ng,note:'manual'}});
@@ -115,12 +113,12 @@
     // refresh OK/NG (dashboard + tabel)
     renderOkNgSoon();
     renderOkNgTableSoon();
-    alert(`工程を更新しました（PO: ${po} / ${proc} / OK:${ok} NG:${ng}）`);
+    alert(`工程を更新しました（注番: ${po} / ${proc} / OK:${ok} NG:${ng}）`);
   };
 
   // ---------- Dashboard: OK/NG per 工程 ----------
   async function renderOkNg(){
-    const dash = q('#pageDash'); if(!isVisible(dash)) return; // jangan panggil saat login
+    const dash = q('#pageDash'); if(!isVisible(dash)) return;
     const host = q('#process-okng'); if(!host) return;
     let map;
     try{ map = await apiCall('okNgSnapshot',{method:'GET'}); }
@@ -136,11 +134,11 @@
   }
   const renderOkNgSoon = debounce(renderOkNg, 150);
 
-  // ---------- Tabel Order: OK/NG per PO (inline di kolom 工程) ----------
+  // ---------- Tabel Order: OK/NG per 注番 (inline di kolom 工程) ----------
   async function getOkNgMap(){ return await apiCall('okNgByPO',{method:'GET'}); }
 
   async function renderOkNgTable(){
-    const dash = q('#pageDash'); if(!isVisible(dash)) return; // jangan panggil saat login
+    const dash = q('#pageDash'); if(!isVisible(dash)) return;
     const tbody = q('#tbOrders'); if(!tbody) return;
 
     let map;
@@ -148,9 +146,11 @@
     catch(e){ console.warn('OK/NG map gagal:', e); return; }
 
     qa('tr', tbody).forEach(tr=>{
-      const po = extractPOFromRow(tr); if(!po) return;
+      // coba deteksi 注番 di sel kiri
+      const bold = q('td:first-child b', tr);
+      const po = (bold && bold.textContent.trim()) || null;
+      if(!po) return;
       const data = map[po] || {ok_qty:0, ng_qty:0};
-      // kolom 工程 = ke-6
       const cell = tr.querySelector('td:nth-child(6)') || tr.querySelector('td:nth-child(5)') || tr.lastElementChild;
       if(!cell) return;
       const old = tr.querySelector('.okng-inline'); if(old) old.remove();
@@ -167,7 +167,6 @@
   document.addEventListener('DOMContentLoaded', ()=>{
     const dash = q('#pageDash');
     if(isVisible(dash)){ renderOkNgSoon(); renderOkNgTableSoon(); }
-    // deteksi perubahan visibility (#pageDash hidden -> tampil)
     const mo = new MutationObserver(()=>{ if(isVisible(dash)){ renderOkNgSoon(); renderOkNgTableSoon(); } });
     mo.observe(dash, {attributes:true, attributeFilter:['class']});
   });
@@ -179,6 +178,5 @@
     mo.observe(tb, {childList:true, subtree:false});
   }
 
-  // ---- util
   function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn.apply(null,a), ms); }; }
 })();
