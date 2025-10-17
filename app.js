@@ -428,11 +428,17 @@ async function changePasswordUI(){
 /* ===== Masters ===== */
 async function loadMasters(){
   try{
-    const m=await apiGet({action:'masters',types:'得意先,品名,品番,図番'},{swrKey:'masters'});
-    const fill=(id,arr)=>{ const el=$(id); if(el) el.innerHTML=(arr||[]).map(v=>`<option value="${v}"></option>`).join(''); };
-    fill('#dl_tokui',m['得意先']); fill('#dl_hinmei',m['品名']); fill('#dl_hinban',m['品番']); fill('#dl_zuban',m['図番']);
+    const m = await apiGet({action:'masters', types:'得意先,品名,品番,図番,送り先,運送会社'},{swrKey:'masters'});
+    const fill = (sel, arr)=>{ const el=$(sel); if(el) el.innerHTML=(arr||[]).map(v=>`<option value="${v}"></option>`).join(''); };
+    fill('#dl_tokui', m['得意先']);
+    fill('#dl_hinmei', m['品名']);
+    fill('#dl_hinban', m['品番']);
+    fill('#dl_zuban', m['図番']);
+    fill('#dl_okurisaki', m['送り先']);
+    fill('#dl_unso', m['運送会社']);
   }catch(e){ console.warn(e); }
 }
+
 
 /* ===== Dashboard (no charts) ===== */
 async function refreshAll(keep=false){
@@ -612,13 +618,15 @@ async function exportSalesCSV(){ const rows=await apiGet({action:'listSales'},{s
 
 
 /* ===== Plan CRUD ===== */
-async function createOrderUI(){
+aasync function createOrderUI(){
   if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
   const p={
-    '通知書番号':$('#c_tsuchi')?$('#c_tsuchi').value.trim():'', '得意先':$('#c_tokui')?$('#c_tokui').value.trim():'',
-    '得意先品番':$('#c_tokui_hin')?$('#c_tokui_hin').value.trim():'', '製番号':$('#c_sei')?$('#c_sei').value.trim():'',
-    '品名':$('#c_hinmei')?$('#c_hinmei').value.trim():'', '品番':$('#c_hinban')?$('#c_hinban').value.trim():'',
-    '図番':$('#c_zuban')?$('#c_zuban').value.trim():'', '管理No':$('#c_kanri')?$('#c_kanri').value.trim():''
+    '得意先': $('#c_tokui')?.value.trim() || '',
+    '製番号': $('#c_sei')?.value.trim() || '',
+    '品名':   $('#c_hinmei')?.value.trim() || '',
+    '品番':   $('#c_hinban')?.value.trim() || '',
+    '図番':   $('#c_zuban')?.value.trim() || '',
+    '数量':   Number($('#c_qty')?.value || 0) || 0
   };
   const editingPoEl=$('#c_po'); const editingPo=editingPoEl?editingPoEl.value.trim():'';
   try{
@@ -630,17 +638,23 @@ async function createOrderUI(){
     refreshAll();
   }catch(e){ alert(e.message||e); }
 }
+
 async function loadOrderForEdit(){
   const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
   if(!po) return alert('注番入力');
   try{
     const o=await apiGet({action:'ticket',po_id:po});
     const set=(id,v)=>{ const el=$(id); if(el) el.value=v||''; };
-    set('#c_tsuchi',o['通知書番号']); set('#c_tokui',o['得意先']); set('#c_tokui_hin',o['得意先品番']);
-    set('#c_sei',o['製番号']); set('#c_hinmei',o['品名']); set('#c_hinban',o['品番']); set('#c_zuban',o['図番']); set('#c_kanri',o['管理No']);
+    set('#c_tokui',o['得意先']);
+    set('#c_sei',o['製番号']);
+    set('#c_hinmei',o['品名']);
+    set('#c_hinban',o['品番']);
+    set('#c_zuban',o['図番']);
+    set('#c_qty', o['数量']||0);
     alert('読み込み完了。');
   }catch(e){ alert(e.message||e); }
 }
+
 async function deleteOrderUI(){
   if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
   const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
@@ -652,16 +666,44 @@ async function deleteOrderUI(){
 /* ===== Ship CRUD ===== */
 async function scheduleUI(){
   if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
-  const poEl=$('#s_po'); const dateEl=$('#s_date'); const qtyEl=$('#s_qty'); const idEl=$('#s_shipid');
-  const po = poEl?poEl.value.trim():'', dateIso=dateEl?dateEl.value:'', qty=qtyEl?qtyEl.value:'';
-  if(!po||!dateIso) return alert('注番と日付');
+
+  const po   = $('#s_po')?.value.trim() || '';
+  const sdate= $('#s_date')?.value || '';     // 出荷日
+  const ddate= $('#s_delivery')?.value || ''; // 納入日
+  const qty  = Number($('#s_qty')?.value || 0) || 0;
+
+  const cust = $('#s_cust')?.value.trim() || '';
+  const item = $('#s_item')?.value.trim() || '';
+  const part = $('#s_part')?.value.trim() || '';
+  const drw  = $('#s_drw')?.value.trim()  || '';
+
+  const dest = $('#s_dest')?.value.trim() || '';
+  const unso = $('#s_carrier')?.value.trim() || '';
+
+  if(!po||!sdate) return alert('注番と出荷日');
+
+  const idEl=$('#s_shipid'); const shipId=idEl? idEl.value.trim() : '';
+
   try{
-    const shipId=idEl?idEl.value.trim():'';
-    if(shipId){ await apiPost('updateShipment',{ship_id:shipId,updates:{po_id:po,scheduled_date:dateIso,qty:qty},user:SESSION}); alert('出荷予定を編集しました'); }
-    else{ const r=await apiPost('scheduleShipment',{po_id:po,dateIso,qty,user:SESSION}); alert('登録: '+r.ship_id); }
+    if(shipId){
+      await apiPost('updateShipment',{
+        ship_id:shipId,
+        updates:{po_id:po,scheduled_date:sdate,delivery_date:ddate,qty,
+                 得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso},
+        user:SESSION
+      });
+      alert('出荷予定を編集しました');
+    }else{
+      const r=await apiPost('scheduleShipment',{
+        po_id:po,dateIso:sdate,deliveryIso:ddate,qty,
+        customer:cust,item,part,drw,dest,carrier:unso,user:SESSION
+      });
+      alert('登録: '+r.ship_id);
+    }
     refreshAll(true);
   }catch(e){ alert(e.message||e); }
 }
+
 async function loadShipForEdit(){
   const idEl=$('#s_shipid'); const sid=idEl?idEl.value.trim():'';
   if(!sid) return alert('出荷ID入力');
