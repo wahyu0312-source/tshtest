@@ -3,32 +3,44 @@
   const q  = (s,r)=> (r||document).querySelector(s);
   const qa = (s,r)=> Array.from((r||document).querySelectorAll(s));
   const text = el => (el && (el.textContent||'').trim()) || '';
+  const isVisible = el => !!el && !el.classList.contains('hidden');
 
   // ---------- API ----------
+  function toQS(obj){
+    return Object.keys(obj||{}).map(k => encodeURIComponent(k)+'='+encodeURIComponent(obj[k]??'')).join('&');
+  }
   async function apiCall(action, opts={}){
     const API_BASE = (window.API_BASE || localStorage.getItem('API_BASE') || '').trim();
     if(!API_BASE) throw new Error('API_BASE belum diset.');
-    const method = (opts.method||'GET').toUpperCase();
-    const headers={'Content-Type':'application/json'};
+
     let url = API_BASE + '?action=' + encodeURIComponent(action);
-    let body;
-    if(method==='GET'){
-      const p = {...(opts.params||{})};
-      Object.keys(p).forEach(k=>{
-        if(p[k]!==undefined && p[k]!==null){
-          url += '&'+encodeURIComponent(k)+'='+encodeURIComponent(p[k]);
-        }
-      });
+    const method = (opts.method||'GET').toUpperCase();
+
+    let fetchOpts = { method };
+    if(method === 'GET'){
+      const p = opts.params || {};
+      const extra = toQS(p);
+      if(extra) url += '&' + extra;
+      // penting: JANGAN set header Content-Type pada GET (hindari preflight)
     }else{
-      body = JSON.stringify(opts.body||{});
+      // kirim sebagai x-www-form-urlencoded -> tidak preflight
+      const body = toQS(opts.body||{});
+      fetchOpts.headers = {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'};
+      fetchOpts.body = body;
     }
+
     let res;
-    try{ res = await fetch(url,{method,headers,body,mode:'cors'}); }
+    try{ res = await fetch(url, fetchOpts); }
     catch(err){ throw new Error('Network error: '+(err?.message||String(err))); }
-    if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('HTTP '+res.status+' – '+t); }
+
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error('HTTP '+res.status+' – '+t);
+    }
+    // Gas kirim JSON
     let json;
     try{ json = await res.json(); }
-    catch(e){ const raw=await res.text().catch(()=> ''); throw new Error('Invalid response (cek deploy/izin API_BASE). Raw: '+raw); }
+    catch(e){ const raw=await res.text().catch(()=> ''); throw new Error('Invalid response. Raw: '+raw); }
     if(!json.ok) throw new Error(json.error||'Server returned ok=false');
     return json.data;
   }
@@ -101,13 +113,14 @@
     if(typeof window.refreshOrders==='function') window.refreshOrders();
     if(typeof window.refreshDashboard==='function') window.refreshDashboard();
     // refresh OK/NG (dashboard + tabel)
-    renderOkNg();
-    renderOkNgTable();
+    renderOkNgSoon();
+    renderOkNgTableSoon();
     alert(`工程を更新しました（PO: ${po} / ${proc} / OK:${ok} NG:${ng}）`);
   };
 
   // ---------- Dashboard: OK/NG per 工程 ----------
   async function renderOkNg(){
+    const dash = q('#pageDash'); if(!isVisible(dash)) return; // jangan panggil saat login
     const host = q('#process-okng'); if(!host) return;
     let map;
     try{ map = await apiCall('okNgSnapshot',{method:'GET'}); }
@@ -121,14 +134,15 @@
               </div>`;
     }).join('');
   }
-  document.addEventListener('DOMContentLoaded', renderOkNg);
-  window.renderOkNg = renderOkNg;
+  const renderOkNgSoon = debounce(renderOkNg, 150);
 
   // ---------- Tabel Order: OK/NG per PO (inline di kolom 工程) ----------
   async function getOkNgMap(){ return await apiCall('okNgByPO',{method:'GET'}); }
 
   async function renderOkNgTable(){
+    const dash = q('#pageDash'); if(!isVisible(dash)) return; // jangan panggil saat login
     const tbody = q('#tbOrders'); if(!tbody) return;
+
     let map;
     try{ map = await getOkNgMap(); }
     catch(e){ console.warn('OK/NG map gagal:', e); return; }
@@ -136,7 +150,7 @@
     qa('tr', tbody).forEach(tr=>{
       const po = extractPOFromRow(tr); if(!po) return;
       const data = map[po] || {ok_qty:0, ng_qty:0};
-      // kolom 工程 = ke-6 (lihat header index.html). Jika struktur berbeda, cari yang paling dekat.
+      // kolom 工程 = ke-6
       const cell = tr.querySelector('td:nth-child(6)') || tr.querySelector('td:nth-child(5)') || tr.lastElementChild;
       if(!cell) return;
       const old = tr.querySelector('.okng-inline'); if(old) old.remove();
@@ -147,14 +161,24 @@
       cell.appendChild(div);
     });
   }
-  document.addEventListener('DOMContentLoaded', renderOkNgTable);
-  window.renderOkNgTable = renderOkNgTable;
+  const renderOkNgTableSoon = debounce(renderOkNgTable, 150);
 
-  // Refresh otomatis saat tabel berubah (data di-render ulang oleh app.js)
+  // Panggil hanya saat Dashboard terlihat
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const dash = q('#pageDash');
+    if(isVisible(dash)){ renderOkNgSoon(); renderOkNgTableSoon(); }
+    // deteksi perubahan visibility (#pageDash hidden -> tampil)
+    const mo = new MutationObserver(()=>{ if(isVisible(dash)){ renderOkNgSoon(); renderOkNgTableSoon(); } });
+    mo.observe(dash, {attributes:true, attributeFilter:['class']});
+  });
+
+  // Refresh otomatis saat tabel order di-render ulang oleh app.js
   const tb = q('#tbOrders');
   if(tb && 'MutationObserver' in window){
-    const deb = (fn,ms=200)=>{ let t; return ()=>{ clearTimeout(t); t=setTimeout(fn,ms); }; };
-    const mo = new MutationObserver(deb(()=>{ renderOkNgTable(); }, 150));
+    const mo = new MutationObserver(()=>{ renderOkNgTableSoon(); });
     mo.observe(tb, {childList:true, subtree:false});
   }
+
+  // ---- util
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn.apply(null,a), ms); }; }
 })();
