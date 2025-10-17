@@ -194,75 +194,90 @@
   </main>
 
   <!-- PLAN -->
-  <main id="pagePlan" class="container hidden">
-    <section class="card">
-      <header class="row-between">
-        <h3><i class="fa-solid fa-list-check"></i> 生産計画（生産現品票）</h3>
-        <div class="row gap">
-          <input type="file" id="filePlan" accept=".csv, .xlsx" class="hidden">
-          <button class="btn ghost" id="btnPlanImport"><i class="fa-solid fa-file-arrow-up"></i> インポート</button>
-          <button class="btn ghost" id="btnPlanExport"><i class="fa-solid fa-file-csv"></i> エクスポート</button>
-          <button class="btn ghost" id="btnPlanEdit"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
-          <button class="btn primary" id="btnCreateOrder"><i class="fa-solid fa-floppy-disk"></i> 保存（新規/編集保存）</button>
-          <button class="btn" id="btnPlanDelete"><i class="fa-solid fa-trash-can"></i> 削除</button>
-        </div>
-      </header>
-
-      <!-- 注番 input: 受注選択 / 手入力 / 空欄 -->
-      <div class="grid">
-        <div style="display:flex;gap:.5rem;align-items:center">
-          <select id="poSource" class="input" style="width:180px">
-            <option value="so">受注から選択</option>
-            <option value="manual">手入力</option>
-            <option value="blank">空欄</option>
-          </select>
-          <input id="c_po" placeholder="注番（編集用）" list="dl_po_from_so">
-          <datalist id="dl_po_from_so"></datalist>
-        </div>
-
-        <input id="c_tsuchi" placeholder="通知書番号">
-        <input id="c_tokui" placeholder="得意先" list="dl_tokui">
-        <input id="c_tokui_hin" placeholder="得意先品番">
-        <input id="c_sei" placeholder="製番号">
-        <input id="c_hinmei" placeholder="品名" list="dl_hinmei">
-        <input id="c_hinban" placeholder="品番" list="dl_hinban">
-        <input id="c_zuban" placeholder="図番" list="dl_zuban">
-        <input id="c_kanri" placeholder="管理No">
+  <!-- PLAN -->
+<main id="pagePlan" class="container hidden">
+  <section class="card">
+    <header class="row-between">
+      <h3><i class="fa-solid fa-list-check"></i> 生産計画（生産現品票）</h3>
+      <div class="row gap">
+        <input type="file" id="filePlan" accept=".csv, .xlsx" class="hidden">
+        <button class="btn ghost" id="btnPlanImport"><i class="fa-solid fa-file-arrow-up"></i> インポート</button>
+        <button class="btn ghost" id="btnPlanExport"><i class="fa-solid fa-file-csv"></i> エクスポート</button>
+        <button class="btn ghost" id="btnPlanEdit"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
+        <button class="btn primary" id="btnCreateOrder"><i class="fa-solid fa-floppy-disk"></i> 保存（新規/編集保存）</button>
+        <button class="btn" id="btnPlanDelete"><i class="fa-solid fa-trash-can"></i> 削除</button>
       </div>
-      <datalist id="dl_tokui"></datalist>
-      <datalist id="dl_hinmei"></datalist>
-      <datalist id="dl_hinban"></datalist>
-      <datalist id="dl_zuban"></datalist>
-    </section>
-  </main>
+    </header>
+
+    <!-- 注番 input: 受注選択 / 手入力 / 空欄 -->
+    <div class="grid">
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <select id="poSource" class="input" style="width:180px">
+          <option value="so">受注から選択</option>
+          <option value="manual">手入力</option>
+          <option value="blank">空欄</option>
+        </select>
+        <input id="c_po" placeholder="注番（編集用）" list="dl_po_from_so">
+        <datalist id="dl_po_from_so"></datalist>
+      </div>
+
+      <input id="c_tokui" placeholder="得意先" list="dl_tokui">
+      <input id="c_sei" placeholder="製番号">
+      <input id="c_hinmei" placeholder="品名" list="dl_hinmei">
+      <input id="c_hinban" placeholder="品番" list="dl_hinban">
+      <input id="c_zuban" placeholder="図番" list="dl_zuban">
+      <input id="c_qty" type="number" min="0" placeholder="数量">
+    </div>
+    <datalist id="dl_tokui"></datalist>
+    <datalist id="dl_hinmei"></datalist>
+    <datalist id="dl_hinban"></datalist>
+    <datalist id="dl_zuban"></datalist>
+  </section>
+</main>
+
 
   <!-- SHIP -->
-  <main id="pageShip" class="container hidden">
-    <section class="card">
-      <header class="row-between">
-        <h3><i class="fa-solid fa-truck"></i> 出荷予定 / 出荷確認</h3>
-        <div class="row gap">
-          <input type="file" id="fileShip" accept=".csv, .xlsx" class="hidden">
-          <button class="btn ghost" id="btnShipImport"><i class="fa-solid fa-file-arrow-up"></i> インポート</button>
-          <button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button>
-          <button class="btn ghost" id="btnShipExport"><i class="fa-solid fa-file-csv"></i> エクスポート</button>
-          <button class="btn ghost" id="btnShipEdit"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
-          <button class="btn primary" id="btnSchedule"><i class="fa-solid fa-floppy-disk"></i> 保存（新規/編集保存）</button>
-          <button class="btn" id="btnShipDelete"><i class="fa-solid fa-trash-can"></i> 削除</button>
-        </div>
-      </header>
-      <div class="grid">
-        <input id="s_po" placeholder="注番">
-        <input id="s_date" type="date">
-        <input id="s_qty" type="number" min="0" placeholder="数量">
-        <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
-      </div>
+  <!-- SHIP -->
+<main id="pageShip" class="container hidden">
+  <section class="card">
+    <header class="row-between">
+      <h3><i class="fa-solid fa-truck"></i> 出荷予定 / 出荷確認</h3>
       <div class="row gap">
-        <button id="btnShipByPO" class="btn ghost grow"><i class="fa-regular fa-file-lines"></i> 出荷確認書（注番）</button>
-        <button id="btnShipByID" class="btn ghost grow"><i class="fa-regular fa-file-lines"></i> 出荷確認書（出荷ID）</button>
+        <input type="file" id="fileShip" accept=".csv, .xlsx" class="hidden">
+        <button class="btn ghost" id="btnShipImport"><i class="fa-solid fa-file-arrow-up"></i> インポート</button>
+        <button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button>
+        <button class="btn ghost" id="btnShipExport"><i class="fa-solid fa-file-csv"></i> エクスポート</button>
+        <button class="btn ghost" id="btnShipEdit"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
+        <button class="btn primary" id="btnSchedule"><i class="fa-solid fa-floppy-disk"></i> 保存（新規/編集保存）</button>
+        <button class="btn" id="btnShipDelete"><i class="fa-solid fa-trash-can"></i> 削除</button>
       </div>
-    </section>
-  </main>
+    </header>
+
+    <div class="grid">
+      <input id="s_po" placeholder="注番">
+      <input id="s_date" type="date" placeholder="出荷日">
+      <input id="s_delivery" type="date" placeholder="納入日">
+      <input id="s_qty" type="number" min="0" placeholder="数量">
+
+      <input id="s_cust" placeholder="得意先" list="dl_tokui">
+      <input id="s_item" placeholder="品名" list="dl_hinmei">
+      <input id="s_part" placeholder="品番" list="dl_hinban">
+      <input id="s_drw" placeholder="図番" list="dl_zuban">
+
+      <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
+      <input id="s_carrier" placeholder="運送会社" list="dl_unso">
+      <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
+    </div>
+
+    <datalist id="dl_okurisaki"></datalist>
+    <datalist id="dl_unso"></datalist>
+
+    <div class="row gap">
+      <button id="btnShipByPO" class="btn ghost grow"><i class="fa-regular fa-file-lines"></i> 出荷確認書（注番）</button>
+      <button id="btnShipByID" class="btn ghost grow"><i class="fa-regular fa-file-lines"></i> 出荷確認書（出荷ID）</button>
+    </div>
+  </section>
+</main>
 
   <!-- 在庫 -->
   <main id="pageInventory" class="container hidden">
