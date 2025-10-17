@@ -250,7 +250,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     btnToInvoice: ()=> show('pageInvoice'),
     btnToCharts: ()=> { show('pageCharts'); ensureChartsLoaded(); }
       // 注番 source selector (plan)
-  initchubanSelector();
+  initChubanSelector();
 
   // --- TAMBAHKAN BARIS INI DI SINI ---
   initWeather();
