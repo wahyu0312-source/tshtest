@@ -4,18 +4,18 @@
 
 /* ===== Config ===== */
 const API_BASE = "https://script.google.com/macros/s/AKfycbyqIp-Y5xuWH6FXXqZCgqL4BFwuPfFQ_YW6KWvXpJo1-eA9zB3Uhs_p9hcjUryR8Q2w/exec";
-const API_KEY = "";
+const API_KEY = ""; // jangan isi untuk menghindari header custom di request
 
-/* ===== Processes (tidak diubah) ===== */
+/* ===== Processes ===== */
 const PROCESSES = [
   'レザー加工','曲げ加工','外枠組立','シャッター組立','シャッター溶接','コーキング',
   '外枠塗装','組立（組立中）','組立（組立済）','外注','検査工程'
 ];
 
-/* ===== Station rules (tidak diubah) ===== */
+/* ===== Station rules ===== */
 const STATION_RULES = {
   'レザー加工': (o)=> ({ current_process:'レザー加工' }),
-  '曲げ工程': (o)=> ({ current_process:'曲げ加工' }),
+  '曲げ工程': (o)=> ({ current_process:'曲げ加工' }), // alias
   '曲げ加工': (o)=> ({ current_process:'曲げ加工' }),
   '外枠組立': (o)=> ({ current_process:'外枠組立' }),
   'シャッター組立': (o)=> ({ current_process:'シャッター組立' }),
@@ -50,7 +50,7 @@ const PROC_CLASS = {
   '組立（組立中）':'prc-asm-in','組立（組立済）':'prc-asm-ok','外注':'prc-out','検査工程':'prc-inspect'
 };
 
-/* ===== SW register ===== */
+/* ===== Service Worker register ===== */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.getRegistration().then(reg=>{
@@ -93,7 +93,6 @@ async function apiPost(action, body){
     const txt=await res.text(); const j=JSON.parse(txt);
     if(!j.ok) throw new Error(j.error||'API error'); return j.data;
   }catch(err){
-    // Fallback: JSONP via GET
     console.warn('POST fell back to JSONP:', err);
     return jsonp(action, payload);
   }
@@ -272,8 +271,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const saved=localStorage.getItem('erp_session');
   if(saved){ SESSION=JSON.parse(saved); enter(); } else { show('authView'); }
 
-  // scanner
+  // scanner buttons
   const btnScanStart = $('#btnScanStart'); if (btnScanStart) btnScanStart.onclick = ()=> initScan();
+  const btnScanClose = $('#btnScanClose'); if(btnScanClose) btnScanClose.onclick=()=>{ stopScan(); $('#dlgScan').close(); };
 
   // 注番 source selector (plan)
   initChubanSelector();
@@ -366,12 +366,596 @@ async function changePasswordUI(){
   }catch(e){ alert(e.message||e); }
 }
 
-/* ===== Masters / Dashboard / Tables / (…semua fungsi kamu tetap sama) ===== */
-/* ---- POTONGAN PANJANG TETAP SAMA DENGAN VERSI TERAKHIRMU ----
-   Aku tidak mengubah logika selain pada helper API dan tombol Charts.
-   Untuk ringkasnya, seluruh bagian renderOrders(), renderSales(), populateChubanFromSales(),
-   initChubanSelector(), createOrderUI(), scheduleUI(), openTicket(), openHistory(),
-   invoice helpers, charts helpers (ensureChartsLoaded, renderCharts, drawBar, drawPie),
-   importer, dsb — semuanya MASIH SAMA seperti sebelumnya.
-   Jika kamu butuh aku re-paste full bagian ini lagi, bilang ya — akan kukirim utuh.
-*/
+/* ===== Masters ===== */
+async function loadMasters(){
+  try{
+    const m=await apiGet({action:'masters',types:'得意先,品名,品番,図番'},{swrKey:'masters'});
+    const fill=(id,arr)=>{ const el=$(id); if(el) el.innerHTML=(arr||[]).map(v=>`<option value="${v}"></option>`).join(''); };
+    fill('#dl_tokui',m['得意先']); fill('#dl_hinmei',m['品名']); fill('#dl_hinban',m['品番']); fill('#dl_zuban',m['図番']);
+  }catch(e){ console.warn(e); }
+}
+
+/* ===== Dashboard (no charts) ===== */
+async function refreshAll(keep=false){
+  try{
+    const s=await apiGet({action:'stock'},{swrKey:'stock'});
+    $('#statFinished').textContent=s.finishedStock;
+    $('#statReady').textContent=s.ready;
+    $('#statShipped').textContent=s.shipped;
+
+    const listToday=$('#listToday');
+    if(listToday) listToday.innerHTML='<div class="shimmer" style="height:16px;border-radius:8px"></div>';
+    const today=await apiGet({action:'todayShip'},{swrKey:'todayShip'});
+    if(listToday){
+      listToday.innerHTML = today.length ? today.map(r=>`<div><span>${r.po_id}</span><span>${fmtD(r.scheduled_date)}・${r.qty}</span></div>`).join('') : '<div class="muted">本日予定なし</div>';
+    }
+
+    const grid=$('#gridProc');
+    if(grid) grid.innerHTML = PROCESSES.map(()=>`<div class="shimmer" style="height:26px;border-radius:8px"></div>`).join('');
+    const loc=await apiGet({action:'locSnapshot'},{swrKey:'locSnapshot'});
+    if(grid) grid.innerHTML = PROCESSES.map(p=> `
+      <div class="grid-chip" style="font-weight:700;color:#0b3b6a">
+        <div class="muted s" style="font-weight:600;color:#475569">${p}</div>
+        <div class="h" style="font-size:18px">${loc[p]||0}</div>
+      </div>`).join('');
+
+    // OK/NG snapshot (optional)
+    try{
+      const okng = await apiGet({action:'okNgSnapshot'},{swrKey:'okng'});
+      if(grid){
+        const html = PROCESSES.map(p=>{
+          const count = loc[p]||0;
+          const o = okng && okng[p] || {ok:0, ng:0};
+          return `
+      <div class="grid-chip" style="font-weight:700;color:#0b3b6a">
+        <div>
+          <div class="muted s" style="font-weight:600;color:#475569">${p}</div>
+          <div class="s muted">OK: <b>${o.ok||0}</b> / NG: <b>${o.ng||0}</b></div>
+        </div>
+        <div class="h" style="font-size:18px">${count}</div>
+      </div>`;
+        }).join('');
+        grid.innerHTML = html;
+      }
+    }catch(_){}
+
+    if(!keep){ const q=$('#searchQ'); if(q) q.value=''; }
+    await renderOrders();
+    await renderSales();
+  }catch(e){ console.error(e); }
+}
+
+/* ===== Orders table ===== */
+async function listOrders(){
+  const qEl=$('#searchQ'); const q = qEl ? qEl.value.trim() : '';
+  return apiGet({action:'listOrders',q},{swrKey:'orders'+(q?':'+q:'')});
+}
+async function renderOrders(){
+  const tbody=$('#tbOrders'); if(!tbody) return;
+  tableSkeleton(tbody, 7, 9);
+  const rows=await listOrders();
+  const frag=document.createDocumentFragment();
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    const statusName = r.status || ''; const procName = r.current_process || '';
+    const stClass = STATUS_CLASS[statusName] || 'st-begin'; const prClass = PROC_CLASS[procName] || 'prc-out';
+
+    const leftCell = `
+      <div class="row-main">
+        <a href="javascript:void(0)" onclick="openTicket('${r.po_id}')" class="link"><b>${r.po_id}</b></a>
+        <div class="row-sub">
+          <div class="kv"><span class="muted">得意先:</span> <b>${r['得意先']||'-'}</b></div>
+          ${r['製番号']?`<div class="kv"><span class="muted">製番号:</span> <b>${r['製番号']}</b></div>`:''}
+          ${(r['品番']||r['図番'])?`<div class="kv"><span class="muted">品番/図番:</span> <b>${r['品番']||''}/${r['図番']||''}</b></div>`:''}
+        </div>
+      </div>`;
+
+    const statusBadge = `<span class="badge ${stClass}"><span class="dot"></span><span>${statusName||'-'}</span></span>`;
+    const procBadge = `<span class="badge ${prClass}"><span class="dot"></span><span>${procName||'-'}</span></span>`;
+
+    const actions = `
+      <div class="actions-2col">
+        <button class="btn ghost s" onclick="openTicket('${r.po_id}')"><i class="fa-regular fa-file-lines"></i> 票</button>
+        <button class="btn ghost s" onclick="startScanFor('${r.po_id}')"><i class="fa-solid fa-qrcode"></i> 更新</button>
+        <button class="btn ghost s" onclick="openShipByPO('${r.po_id}')"><i class="fa-solid fa-truck"></i> 出荷票</button>
+        <button class="btn ghost s" onclick="openHistory('${r.po_id}')"><i class="fa-solid fa-clock-rotate-left"></i> 履歴</button>
+      </div>`;
+
+    tr.innerHTML = `
+      <td>${leftCell}</td>
+      <td>${r['品名']||''}</td>
+      <td>${r['品番']||''}</td>
+      <td>${r['図番']||''}</td>
+      <td class="col-status">${statusBadge}</td>
+      <td class="col-proc">${procBadge}</td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+      <td class="s muted">${r.updated_by||''}</td>
+      <td class="s">${actions}</td>
+    `;
+    frag.appendChild(tr);
+  });
+  clearSkeleton(tbody); tbody.appendChild(frag);
+}
+
+/* ===== Sales (営業) ===== */
+async function renderSales(){
+  const tbody=$('#tbSales'); if(!tbody) return;
+  tableSkeleton(tbody, 7, 10);
+  const qEl=$('#salesQ'); const q=(qEl&&qEl.value)? qEl.value.trim():'';
+  const rows=await apiGet({action:'listSales',q},{swrKey:'sales'+(q?':'+q:'')});
+  tbody.innerHTML = rows.map(r=> `
+    <tr>
+      <td>${r.so_id||''}</td>
+      <td class="s muted">${fmtD(r['受注日'])}</td>
+      <td>${r['得意先']||''}</td>
+      <td>${r['品名']||''}</td>
+      <td>${(r['品番']||'')}/${(r['図番']||'')}</td>
+      <td>${r['数量']||0}</td>
+      <td class="s muted">${fmtD(r['希望納期'])}</td>
+      <td><span class="badge">${r.status||''}</span></td>
+      <td>${r['linked_po_id']||''}</td>
+      <td class="s muted">${fmtDT(r['updated_at'])}</td>
+    </tr>`).join('');
+}
+
+/* populate 注番 selector (from 受注) */
+async function populateChubanFromSales(){
+  const dl = document.getElementById('dl_po_from_so'); if(!dl) return;
+  try{
+    const rows = await apiGet({action:'listSales'},{swrKey:'sales'});
+    dl.innerHTML = (rows||[]).map(r=> `<option value="${r.so_id||''}" label="${(r['得意先']||'') + ' / ' + (r['品名']||'')}"></option>`).join('');
+  }catch(e){ console.warn('dl_po_from_so:', e); }
+}
+function initChubanSelector(){
+  const sel = document.getElementById('poSource');
+  const input = document.getElementById('c_po');
+  if(!sel || !input) return;
+  sel.addEventListener('change', ()=>{
+    const v = sel.value;
+    if(v==='so'){ input.setAttribute('list','dl_po_from_so'); input.placeholder='注番（受注から選択）'; }
+    if(v==='manual'){ input.removeAttribute('list'); input.placeholder='注番（手入力）'; }
+    if(v==='blank'){ input.removeAttribute('list'); input.value=''; input.placeholder='注番（空欄可）'; }
+  });
+  sel.dispatchEvent(new Event('change'));
+}
+
+async function saveSalesUI(){
+  const p={
+    '受注日':$('#so_date')?$('#so_date').value:'', '得意先':$('#so_cust')?$('#so_cust').value:'',
+    '品名':$('#so_item')?$('#so_item').value:'', '品番':$('#so_part')?$('#so_part').value:'',
+    '図番':$('#so_drw')?$('#so_drw').value:'', '製番号':$('#so_sei')?$('#so_sei').value:'',
+    '数量':$('#so_qty')?$('#so_qty').value:'', '希望納期':$('#so_req')?$('#so_req').value:'', '備考':$('#so_note')?$('#so_note').value:''
+  };
+  const soEl=$('#so_id'); const so=soEl?soEl.value.trim():'';
+  try{
+    if(so){ await apiPost('updateSalesOrder',{so_id:so,updates:p,user:SESSION}); alert('受注を更新しました'); }
+    else { const r=await apiPost('createSalesOrder',{payload:p,user:SESSION}); alert('受注登録: '+r.so_id); if(soEl) soEl.value=r.so_id; }
+    renderSales();
+    populateChubanFromSales();
+  }catch(e){ alert(e.message||e); }
+}
+async function deleteSalesUI(){
+  const soEl=$('#so_id'); const so=soEl?soEl.value.trim():'';
+  if(!so) return alert('注番入力'); if(!confirm('削除しますか？')) return;
+  try{ const r=await apiPost('deleteSalesOrder',{so_id:so,user:SESSION}); alert('削除: '+r.deleted); renderSales(); populateChubanFromSales(); }
+  catch(e){ alert(e.message||e); }
+}
+async function promoteSalesUI(){
+  const soEl=$('#so_id'); const so=soEl?soEl.value.trim():'';
+  if(!so) return alert('注番入力');
+  try{ const r=await apiPost('promoteSalesToPlan',{so_id:so,user:SESSION}); alert('生産計画を作成: '+r.po_id); refreshAll(); }
+  catch(e){ alert(e.message||e); }
+}
+async function exportSalesCSV(){ const rows=await apiGet({action:'listSales'},{swrKey:'sales'}); downloadCSV('sales_orders.csv', rows); }
+
+/* ===== Plan CRUD ===== */
+async function createOrderUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
+  const p={
+    '通知書番号':$('#c_tsuchi')?$('#c_tsuchi').value.trim():'', '得意先':$('#c_tokui')?$('#c_tokui').value.trim():'',
+    '得意先品番':$('#c_tokui_hin')?$('#c_tokui_hin').value.trim():'', '製番号':$('#c_sei')?$('#c_sei').value.trim():'',
+    '品名':$('#c_hinmei')?$('#c_hinmei').value.trim():'', '品番':$('#c_hinban')?$('#c_hinban').value.trim():'',
+    '図番':$('#c_zuban')?$('#c_zuban').value.trim():'', '管理No':$('#c_kanri')?$('#c_kanri').value.trim():''
+  };
+  const editingPoEl=$('#c_po'); const editingPo=editingPoEl?editingPoEl.value.trim():'';
+  try{
+    if(editingPo){ await apiPost('updateOrder',{po_id:editingPo,updates:p,user:SESSION}); alert('編集保存しました'); }
+    else{
+      const r=await apiPost('createOrder',{payload:p,user:SESSION});
+      alert('作成: '+r.po_id); if(editingPoEl) editingPoEl.value=r.po_id;
+    }
+    refreshAll();
+  }catch(e){ alert(e.message||e); }
+}
+async function loadOrderForEdit(){
+  const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
+  if(!po) return alert('注番入力');
+  try{
+    const o=await apiGet({action:'ticket',po_id:po});
+    const set=(id,v)=>{ const el=$(id); if(el) el.value=v||''; };
+    set('#c_tsuchi',o['通知書番号']); set('#c_tokui',o['得意先']); set('#c_tokui_hin',o['得意先品番']);
+    set('#c_sei',o['製番号']); set('#c_hinmei',o['品名']); set('#c_hinban',o['品番']); set('#c_zuban',o['図番']); set('#c_kanri',o['管理No']);
+    alert('読み込み完了。');
+  }catch(e){ alert(e.message||e); }
+}
+async function deleteOrderUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
+  const poEl=$('#c_po'); const po=poEl?poEl.value.trim():'';
+  if(!po) return alert('注番入力'); if(!confirm('削除しますか？')) return;
+  try{ const r=await apiPost('deleteOrder',{po_id:po,user:SESSION}); alert('削除:'+r.deleted); refreshAll(); }
+  catch(e){ alert(e.message||e); }
+}
+
+/* ===== Ship CRUD ===== */
+async function scheduleUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
+  const poEl=$('#s_po'); const dateEl=$('#s_date'); const qtyEl=$('#s_qty'); const idEl=$('#s_shipid');
+  const po = poEl?poEl.value.trim():'', dateIso=dateEl?dateEl.value:'', qty=qtyEl?qtyEl.value:'';
+  if(!po||!dateIso) return alert('注番と日付');
+  try{
+    const shipId=idEl?idEl.value.trim():'';
+    if(shipId){ await apiPost('updateShipment',{ship_id:shipId,updates:{po_id:po,scheduled_date:dateIso,qty:qty},user:SESSION}); alert('出荷予定を編集しました'); }
+    else{ const r=await apiPost('scheduleShipment',{po_id:po,dateIso,qty,user:SESSION}); alert('登録: '+r.ship_id); }
+    refreshAll(true);
+  }catch(e){ alert(e.message||e); }
+}
+async function loadShipForEdit(){
+  const idEl=$('#s_shipid'); const sid=idEl?idEl.value.trim():'';
+  if(!sid) return alert('出荷ID入力');
+  try{
+    const d=await apiGet({action:'shipById',ship_id:sid});
+    const set=(id,v)=>{ const el=$(id); if(el) el.value=v||''; };
+    set('#s_po', d.shipment.po_id||'');
+    set('#s_date', d.shipment.scheduled_date? new Date(d.shipment.scheduled_date).toISOString().slice(0,10):'');
+    set('#s_qty', d.shipment.qty||0);
+    alert('読み込み完了。');
+  }catch(e){ alert(e.message||e); }
+}
+async function deleteShipUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
+  const idEl=$('#s_shipid'); const sid=idEl?idEl.value.trim():'';
+  if(!sid) return alert('出荷ID入力'); if(!confirm('削除しますか？')) return;
+  try{ const r=await apiPost('deleteShipment',{ship_id:sid,user:SESSION}); alert('削除:'+r.deleted); refreshAll(true); }
+  catch(e){ alert(e.message||e); }
+}
+async function openShipByPO(po){
+  try{
+    const d=await apiGet({action:'shipByPo',po_id:po});
+    showShipDoc(d.shipment, d.order);
+  }catch(e){ alert(e.message||e); }
+}
+async function openShipByID(id){
+  try{
+    const d=await apiGet({action:'shipById',ship_id:id});
+    showShipDoc(d.shipment, d.order);
+  }catch(e){ alert(e.message||e); }
+}
+function showShipDoc(s,o){
+  const dt=s.scheduled_date? new Date(s.scheduled_date):null;
+  const body=`<h3>出荷確認書</h3><table>
+    <tr><th>得意先</th><td>${o['得意先']||''}</td><th>出荷日</th><td>${dt?dt.toLocaleDateString():'-'}</td></tr>
+    <tr><th>注番</th><td>${s.po_id}</td><th>数量</th><td>${s.qty||0}</td></tr>
+    <tr><th>品名</th><td>${o['品名']||''}</td><th>品番/図番</th><td>${(o['品番']||'')+' / '+(o['図番']||'')}</td></tr>
+    <tr><th>状態</th><td colspan="3">${o.status||''}</td></tr></table>`;
+  showDoc('dlgShip', body);
+}
+
+/* ===== Docs ===== */
+async function openTicket(po_id){
+  try{
+    const o=await apiGet({action:'ticket',po_id});
+    const body=`<h3>生産現品票</h3><table>
+      <tr><th>管理No</th><td>${o['管理No']||'-'}</td><th>通知書番号</th><td>${o['通知書番号']||'-'}</td></tr>
+      <tr><th>得意先</th><td>${o['得意先']||''}</td><th>得意先品番</th><td>${o['得意先品番']||''}</td></tr>
+      <tr><th>製番号</th><td>${o['製番号']||''}</td><th>投入日</th><td>${o['created_at']?new Date(o['created_at']).toLocaleDateString():'-'}</td></tr>
+      <tr><th>品名</th><td>${o['品名']||''}</td><th>品番/図番</th><td>${(o['品番']||'')+' / '+(o['図番']||'')}</td></tr>
+      <tr><th>工程</th><td colspan="3">${o.current_process||''}</td></tr>
+      <tr><th>状態</th><td>${o.status||''}</td><th>更新</th><td>${fmtDT(o.updated_at)} / ${o.updated_by||''}</td></tr></table>`;
+    showDoc('dlgTicket',body);
+  }catch(e){ alert(e.message||e); }
+}
+function showDoc(id, html){
+  const dlg=document.getElementById(id);
+  if(!dlg) return;
+  const body=dlg.querySelector('.body'); if(body) body.innerHTML=html;
+  dlg.showModal();
+}
+
+/* ==== History ==== */
+async function openHistory(po_id){
+  try{
+    const data=await apiGet({action:'history',po_id});
+    const rows=(data||[]).map(x=>`
+      <div class="row s" style="gap:.5rem;border-bottom:1px solid var(--border);padding:.25rem 0">
+        <span class="muted">${fmtDT(x.timestamp)}</span>
+        <span>${x.updated_by||''}</span>
+        <span class="badge ${STATUS_CLASS[x.new_status]||'st-begin'}">${x.prev_status||''} → ${x.new_status||''}</span>
+        <span class="badge ${PROC_CLASS[x.new_process]||'prc-out'}">${x.prev_process||''} → ${x.new_process||''}</span>
+        ${x.note?`<span class="muted">「${x.note}」</span>`:''}
+      </div>`).join('');
+    const html=`<h3>更新履歴（注番: ${po_id}）</h3>
+      <div class="row gap" style="margin:.35rem 0">
+        <button class="btn ghost s" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+      </div>
+      <div id="histBody">${rows||'<div class="muted s">履歴なし</div>'}</div>`;
+    showDoc('dlgHistory', html);
+    window._histForCSV = data||[];
+  }catch(e){ alert(e.message||e); }
+}
+function exportHistoryCSV(){
+  const data = window._histForCSV||[];
+  downloadCSV('history.csv', data);
+}
+
+/* ===== QR Station & Scan ===== */
+function openStationQR(){
+  const dlg=$('#dlgStationQR'); const wrap=$('#qrWrap'); if(!dlg||!wrap) return;
+  wrap.innerHTML = PROCESSES.map(p=>`<div id="qr-${p}" style="display:flex;flex-direction:column;align-items:center;gap:.35rem">
+      <div class="muted s">${p}</div><div class="qrbox" data-text="ST:${p}"></div></div>`).join('');
+  dlg.showModal();
+  setTimeout(()=>{
+    wrap.querySelectorAll('.qrbox').forEach(div=>{
+      const t=div.dataset.text;
+      new QRCode(div,{text:t,width:120,height:120});
+    });
+  },0);
+}
+function openAddUserModal(){ alert('ユーザー追加はログイン画面で対応しています。'); }
+function startScanFor(po){
+  CURRENT_PO=po;
+  const dlg=$('#dlgScan'); if(!dlg) return;
+  dlg.showModal();
+  $('#scanPO').textContent=po;
+  initScan();
+}
+async function initScan(){
+  const video=$('#scanVideo'), canvas=$('#scanCanvas'), result=$('#scanResult');
+  if(!video||!canvas) return;
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    video.srcObject=scanStream; await video.play();
+    const ctx=canvas.getContext('2d');
+    scanTimer = setInterval(async ()=>{
+      if(video.readyState!==video.HAVE_ENOUGH_DATA) return;
+      canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const code=jsQR(img.data, img.width, img.height);
+      if(code && code.data){
+        result.textContent='読み取り: '+code.data;
+        const token=String(code.data||'');
+        const [prefix, station] = token.split(':');
+        if(prefix==='ST' && station && CURRENT_PO){
+          const ok = Number($('#man_ok')?$('#man_ok').value:'')||0;
+          const ng = Number($('#man_ng')?$('#man_ng').value:'')||0;
+          try{
+            const o=await apiGet({action:'ticket',po_id:CURRENT_PO});
+            const rule=STATION_RULES[station] || ((_o)=>({current_process:station}));
+            const updates=Object.assign({ok_qty: ok, ng_qty: ng}, rule(o) || {});
+            await apiPost('updateOrder',{po_id:CURRENT_PO,updates:updates,user:SESSION});
+            alert('更新しました'); refreshAll(true);
+          }catch(e){ alert(e.message||e); }
+        }
+        stopScan();
+        $('#dlgScan').close();
+      }
+    }, 300);
+  }catch(e){ alert('カメラ起動不可: '+(e.message||e)); }
+}
+function stopScan(){
+  if(scanTimer){ clearInterval(scanTimer); scanTimer=null; }
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+}
+
+/* ===== Inventory & Finished ===== */
+async function renderInventory(){
+  const tbody=$('#tbInv'); if(!tbody) return;
+  tableSkeleton(tbody, 8, 8);
+  const qEl=$('#invQ'); const q=(qEl&&qEl.value)? qEl.value.trim():'';
+  const rows=await apiGet({action:'listInventory',q},{swrKey:'inv'+(q?':'+q:'')});
+  tbody.innerHTML = rows.map(r=> `
+    <tr>
+      <td>
+        <div class="row-main">
+          <b>${r.po_id}</b>
+          <div class="row-sub">
+            <div class="kv"><span class="muted">得意先:</span> <b>${r['得意先']||'-'}</b></div>
+          </div>
+        </div>
+      </td>
+      <td>${r['品名']||''}</td>
+      <td>${r['品番']||''}</td>
+      <td>${r['図番']||''}</td>
+      <td><span class="badge ${STATUS_CLASS[r.status]||'st-begin'}">${r.status||''}</span></td>
+      <td><span class="badge ${PROC_CLASS[r.current_process]||'prc-out'}">${r.current_process||''}</span></td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+      <td class="s muted">${r.updated_by||''}</td>
+    </tr>`).join('');
+}
+async function renderFinished(){
+  const tbody=$('#tbFin'); if(!tbody) return;
+  tableSkeleton(tbody, 8, 8);
+  const qEl=$('#finQ'); const q=(qEl&&qEl.value)? qEl.value.trim():'';
+  const rows=await apiGet({action:'listFinished',q},{swrKey:'fin'+(q?':'+q:'')});
+  tbody.innerHTML = rows.map(r=> `
+    <tr>
+      <td>
+        <div class="row-main">
+          <b>${r.po_id}</b>
+          <div class="row-sub">
+            <div class="kv"><span class="muted">得意先:</span> <b>${r['得意先']||'-'}</b></div>
+          </div>
+        </div>
+      </td>
+      <td>${r['品名']||''}</td>
+      <td>${r['品番']||''}</td>
+      <td>${r['図番']||''}</td>
+      <td><span class="badge ${STATUS_CLASS[r.status]||'st-begin'}">${r.status||''}</span></td>
+      <td><span class="badge ${PROC_CLASS[r.current_process]||'prc-out'}">${r.current_process||''}</span></td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+      <td class="s muted">${r.updated_by||''}</td>
+    </tr>`).join('');
+}
+
+/* ===== Invoice ===== */
+async function previewInvoiceUI(){
+  const info={
+    customer: $('#inv_customer')?$('#inv_customer').value.trim():'',
+    from: $('#inv_from')?$('#inv_from').value:'',
+    to: $('#inv_to')?$('#inv_to').value:'',
+  };
+  if(!info.from||!info.to) return alert('期間（自/至）を入力');
+  try{
+    const d=await apiGet({action:'previewInvoice',customer:info.customer,from:info.from,to:info.to});
+    INV_PREVIEW.info = {
+      得意先: d.info.得意先, 期間自: d.info.期間自, 期間至: d.info.期間至,
+      請求日: $('#inv_date')?$('#inv_date').value || new Date().toISOString().slice(0,10): new Date(),
+      通貨: $('#inv_currency')?$('#inv_currency').value:'JPY', メモ: $('#inv_memo')?$('#inv_memo').value:''
+    };
+    INV_PREVIEW.lines = d.lines.map(l=> ({...l, 単価: l.単価||0, 金額: (l.数量||0)*(l.単価||0)}));
+    renderInvoiceLines();
+  }catch(e){ alert(e.message||e); }
+}
+function renderInvoiceLines(){
+  const tb=$('#invLines'); if(!tb) return;
+  let sub=0;
+  tb.innerHTML = INV_PREVIEW.lines.map((l,i)=>{
+    const amount = Number(l.数量||0)*Number(l.単価||0); sub+=amount;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${l.品名||''}</td><td>${l.品番||''}</td><td>${l.図番||''}</td>
+      <td>${l.数量||0}</td>
+      <td contenteditable oninput="onInvPriceChange(${i}, this.innerText)">${l.単価||0}</td>
+      <td>${amount}</td>
+      <td>${l.PO||l.POs||l.注番||''}</td>
+      <td>${l.出荷ID||l.出荷IDs||''}</td>
+    </tr>`;
+  }).join('');
+  const tax=Math.round(sub*0.1), total=sub+tax;
+  $('#invSub').textContent=sub; $('#invTax').textContent=tax; $('#invTotal').textContent=total;
+}
+function onInvPriceChange(idx, v){
+  const price=Number(String(v).replace(/[^\d.]/g,''))||0;
+  if(!INV_PREVIEW.lines[idx]) return;
+  INV_PREVIEW.lines[idx].単価=price;
+  renderInvoiceLines();
+}
+async function createInvoiceUI(){
+  if(!(SESSION && (SESSION.role==='admin'||SESSION.department==='生産技術'||SESSION.department==='生産管理部'))) return alert('権限不足');
+  if(!INV_PREVIEW.info || !INV_PREVIEW.lines.length) return alert('先に集計してください');
+  try{
+    const payload={info: INV_PREVIEW.info, lines: INV_PREVIEW.lines};
+    const r=await apiPost('createInvoice',{payload,user:SESSION});
+    INV_PREVIEW.inv_id = r.inv_id;
+    alert(`発行しました: ${r.inv_id}（合計: ${r.合計}）`);
+  }catch(e){ alert(e.message||e); }
+}
+async function openInvoiceDoc(inv_id){
+  if(!inv_id){ alert('請求書IDがありません'); return; }
+  try{
+    const d=await apiGet({action:'invoiceDoc',inv_id});
+    const head=d.inv||{};
+    const body=`<h3>請求書</h3><table>
+      <tr><th>請求書</th><td>${head.inv_id}</td><th>請求日</th><td>${fmtD(head['請求日'])}</td></tr>
+      <tr><th>得意先</th><td>${head['得意先']}</td><th>期間</th><td>${fmtD(head['期間自'])}〜${fmtD(head['期間至'])}</td></tr>
+      <tr><th>小計</th><td>${head['小計']}</td><th>合計</th><td>${head['合計']}</td></tr>
+    </table>
+    <h4>明細</h4>
+    <table><thead><tr><th>#</th><th>品名</th><th>数量</th><th>単価</th><th>金額</th><th>注番</th><th>出荷ID</th></tr></thead>
+    <tbody>${(d.lines||[]).map(l=>`<tr><td>${l['行No']}</td><td>${l['品名']}</td><td>${l['数量']}</td><td>${l['単価']}</td><td>${l['金額']}</td><td>${l['PO']||l['注番']}</td><td>${l['出荷ID']}</td></tr>`).join('')}</tbody></table>`;
+    showDoc('dlgTicket', body);
+  }catch(e){ alert(e.message||e); }
+}
+
+/* ===== Charts ===== */
+function ensureChartsLoaded(){ renderCharts().catch(console.warn); }
+function fillChartYearSelector(){
+  const sel=$('#chartYear'); if(!sel) return;
+  const y=(new Date()).getFullYear();
+  sel.innerHTML=[y-2,y-1,y,y+1].map(v=>`<option value="${v}" ${v===y?'selected':''}>${v}</option>`).join('');
+}
+async function renderCharts(){
+  try{
+    const d=await apiGet({action:'charts'},{swrKey:'charts'});
+    const year=d.year|| (new Date()).getFullYear();
+    if($('#chartYear')) $('#chartYear').value=year;
+    const ms=(arr)=>({labels:['1','2','3','4','5','6','7','8','9','10','11','12'], datasets:[{label:'数量', data:arr}]});
+    drawBar('chMonthly', ms(d.perMonth));
+    drawPie('chCustomer', d.perCust||{});
+    drawPie('chStock', d.stockBuckets||{});
+    drawBar('chWipProc', {labels:Object.keys(d.wipByProcess||{}), datasets:[{label:'点数', data:Object.values(d.wipByProcess||{})}]});
+    drawBar('chSales', ms(d.salesPerMonth||[]));
+    drawBar('chPlan', ms(d.planPerMonth||[]));
+  }catch(e){ console.warn(e); }
+}
+function drawBar(id, data){
+  const ctx=document.getElementById(id); if(!ctx) return;
+  new Chart(ctx, {type:'bar', data, options:{responsive:true, maintainAspectRatio:false, animation:{duration:300}}});
+}
+function drawPie(id, obj){
+  const ctx=document.getElementById(id); if(!ctx) return;
+  new Chart(ctx, {type:'doughnut', data:{labels:Object.keys(obj), datasets:[{data:Object.values(obj)}]}, options:{responsive:true, maintainAspectRatio:false, animation:{duration:300}}});
+}
+
+/* ===== Import / Export ===== */
+function downloadCSV(filename, rows){
+  const head = rows && rows.length ? Object.keys(rows[0]) : [];
+  const csv = [head.join(','), ...(rows||[]).map(r=> head.map(h=> JSON.stringify(r[h]??'')).join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+async function exportOrdersCSV(){ const rows=await apiGet({action:'listOrders'},{swrKey:'orders'}); downloadCSV('orders.csv', rows); }
+async function exportShipCSV(){ const rows=await apiGet({action:'todayShip'},{swrKey:'todayShip'}); downloadCSV('today_ship.csv', rows); }
+function exportInvoiceCSV(){
+  if (!INV_PREVIEW || !INV_PREVIEW.lines || !INV_PREVIEW.lines.length){
+    alert('先に「集計（出荷済）」を実行してください。');
+    return;
+  }
+  const head = ['#','品名','品番','図番','数量','単価','金額','注番','出荷ID'];
+  const rows = INV_PREVIEW.lines.map((l,i)=>({
+    '#': i+1,
+    '品名': l.品名||'',
+    '品番': l.品番||'',
+    '図番': l.図番||'',
+    '数量': l.数量||0,
+    '単価': l.単価||0,
+    '金額': (Number(l.数量||0)*Number(l.単価||0))||0,
+    '注番': l.PO || l.注番 || l.POs || '',
+    '出荷ID': l.出荷ID || l.出荷IDs || ''
+  }));
+  const csv = [head.join(','), ...rows.map(r=> head.map(h=> JSON.stringify(r[h]??'')).join(','))].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'invoice_lines.csv'; a.click();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+function handleImport(e, type){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload = async (ev)=>{
+    const data = ev.target.result;
+    let rows=[];
+    if(file.name.endsWith('.csv')){
+      const lines = data.split(/\r?\n/).filter(Boolean);
+      const head = lines.shift().split(',').map(h=> h.replace(/^"|"$/g,''));
+      rows = lines.map(line=>{
+        const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g).map(x=> x.replace(/^"|"$/g,''));
+        const o={}; head.forEach((h,i)=> o[h]=cols[i]); return o;
+      });
+    }else{
+      const wb = XLSX.read(data, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws);
+    }
+    try{
+      if(type==='sales') await apiPost('importSales',{rows,user:SESSION,mode:'upsert'});
+      if(type==='orders') await apiPost('importOrders',{rows,user:SESSION,mode:'upsert'});
+      if(type==='ship') await apiPost('importShipments',{rows,user:SESSION,mode:'upsert'});
+      alert('インポート成功'); refreshAll(true); populateChubanFromSales();
+    }catch(err){ showApiError('import-'+type, err); }
+  };
+  if(file.name.endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsBinaryString(file);
+}
