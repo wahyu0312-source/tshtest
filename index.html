@@ -6,7 +6,7 @@
   <title>東京精密発條株式会社システム</title>
   <link rel="icon" href="assets/tsh.png">
 
-  <!-- Font Awesome (SRI dihapus agar tidak diblokir) -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
 
   <!-- Styles -->
@@ -17,14 +17,16 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- SheetJS for Excel parsing -->
+  <!-- SheetJS -->
   <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
-  <!-- App -->
+  <!-- App (asli) -->
   <script defer src="app.js"></script>
+
+  <!-- Hotfix patch (ditaruh TANPA defer agar bisa override segera) -->
   <script src="app.hotfix.js"></script>
 
-  <!-- ====== (ADD) Minimal styling untuk pill cuaca elegan ====== -->
+  <!-- Styling kecil pill cuaca -->
   <style>
     .wx-pill{ display:inline-flex;align-items:center;gap:.6rem; padding:.5rem .8rem;border-radius:999px; border:1px solid rgba(0,0,0,.08); background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%); color:#0f172a; box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff; min-height:40px; max-width:60vw; }
     .wx-city{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -33,6 +35,11 @@
     .wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
     @media (max-width:760px){ .wx-pill{order:-1} }
   </style>
+
+  <script>
+    // ====== SET API_BASE di sini (ganti jika URL deploy berubah) ======
+    window.API_BASE = 'https://script.google.com/macros/s/AKfycbyqIp-Y5xuWH6FXXqZCgqL4BFwuPfFQ_YW6KWvXpJo1-eA9zB3Uhs_p9hcjUryR8Q2w/exec';
+  </script>
 </head>
 <body>
 
@@ -43,26 +50,24 @@
       <span class="brand">東京精密発條株式会社システム</span>
     </div>
 
-    <!-- ===== (ADD) Weather pill: kota (JP) + ikon + suhu ===== -->
+    <!-- Weather pill -->
     <div id="weather" class="wx-pill" aria-live="polite" title="現在の天気">
       <span id="wxCity" class="wx-city">取得中…</span>
       <span class="wx-dot" aria-hidden="true"></span>
       <span id="wxIcon" class="wx-ico" aria-hidden="true"></span>
       <span id="wxTemp" class="wx-temp">--℃</span>
     </div>
-    <!-- ===== /Weather pill ===== -->
 
     <div class="nav-right">
       <button id="btnToDash" class="btn ghost hidden"><i class="fa-solid fa-gauge"></i> ダッシュボード</button>
       <button id="btnToSales" class="btn ghost hidden"><i class="fa-regular fa-handshake"></i> 受注（営業）</button>
-      <button id="btnToPlan" class="btn ghost hidden"><i class="fa-solid fa-list-check"></i> 生産計画</button>
-      <button id="btnToShip" class="btn ghost hidden"><i class="fa-solid fa-truck"></i> 出荷予定</button>
+      <button id="btnToPlan"  class="btn ghost hidden"><i class="fa-solid fa-list-check"></i> 生産計画</button>
+      <button id="btnToShip"  class="btn ghost hidden"><i class="fa-solid fa-truck"></i> 出荷予定</button>
       <button id="btnToInvPage" class="btn ghost hidden"><i class="fa-solid fa-boxes-stacked"></i> 在庫</button>
       <button id="btnToFinPage" class="btn ghost hidden"><i class="fa-regular fa-square-check"></i> 完成品一覧</button>
       <button id="btnToInvoice" class="btn ghost hidden"><i class="fa-regular fa-file-lines"></i> 請求書</button>
-      <button id="btnToCharts" class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
+      <button id="btnToCharts"  class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
 
-      <!-- ======== SETTINGS DROPDOWN ======== -->
       <details class="dropdown-inline hidden" id="ddSetting">
         <summary class="btn ghost">
           <i class="fa-solid fa-gear"></i> 設定
@@ -70,7 +75,7 @@
         </summary>
         <div class="menu right">
           <button id="miStationQR" class="menu-item"><i class="fa-solid fa-qrcode"></i> 工程QR</button>
-          <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button>
+          <button id="miAddUser"   class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button>
           <button id="miChangePass" class="menu-item"><i class="fa-solid fa-key"></i> パス変更</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:.35rem 0">
           <button id="btnLogout" class="menu-item"><i class="fa-solid fa-right-from-bracket"></i> ログアウト</button>
@@ -80,7 +85,6 @@
     </div>
   </nav>
 
-  <!-- corner branding -->
   <a class="corner-brand" href="#" aria-label="Design credit">Design by Wahyu</a>
 
   <!-- ================= AUTH ================= -->
@@ -179,10 +183,10 @@
         <input id="so_cust" placeholder="得意先" list="dl_tokui">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
         <input id="so_part" placeholder="品番" list="dl_hinban">
-        <input id="so_drw" placeholder="図番" list="dl_zuban">
-        <input id="so_sei" placeholder="製番号">
-        <input id="so_qty" type="number" placeholder="数量">
-        <input id="so_req" type="date" placeholder="希望納期">
+        <input id="so_drw"  placeholder="図番" list="dl_zuban">
+        <input id="so_sei"  placeholder="製番号">
+        <input id="so_qty"  type="number" placeholder="数量">
+        <input id="so_req"  type="date" placeholder="希望納期">
         <input id="so_note" placeholder="備考">
       </div>
     </section>
@@ -239,7 +243,6 @@
         <h3><i class="fa-solid fa-truck"></i> 出荷予定 / 出荷確認</h3>
         <div class="row gap">
           <input type="file" id="fileShip" accept=".csv, .xlsx" class="hidden">
-          <button class="btn ghost" id="btnShipImport"><i class="fa-solid fa-file-arrow-up"></i> インポート</button>
           <button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button>
           <button class="btn ghost" id="btnShipExport"><i class="fa-solid fa-file-csv"></i> エクスポート</button>
           <button class="btn ghost" id="btnShipEdit"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
@@ -270,7 +273,7 @@
       <div class="table-wrap">
         <table class="table s">
           <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr></thead>
-        <tbody id="tbInv"></tbody>
+          <tbody id="tbInv"></tbody>
         </table>
       </div>
     </section>
@@ -299,18 +302,19 @@
       <div class="grid">
         <input id="inv_customer" placeholder="得意先" list="dl_tokui">
         <input id="inv_from" type="date" placeholder="期間自">
-        <input id="inv_to" type="date" placeholder="期間至">
+        <input id="inv_to"   type="date" placeholder="期間至">
         <input id="inv_date" type="date" placeholder="請求日">
         <input id="inv_currency" placeholder="通貨" value="JPY">
         <input id="inv_memo" placeholder="メモ">
       </div>
       <div class="row gap" style="margin-top:.6rem">
         <button id="btnInvPreview" class="btn ghost"><i class="fa-solid fa-calculator"></i> 集計（出荷済）</button>
-        <button id="btnInvCreate" class="btn primary"><i class="fa-solid fa-stamp"></i> 請求書発行</button>
-        <button id="btnInvPrint" class="btn ghost"><i class="fa-solid fa-print"></i> 印刷</button>
-        <button id="btnInvCSV" class="btn ghost"><i class="fa-solid fa-file-csv"></i> CSV</button>
+        <button id="btnInvCreate"  class="btn primary"><i class="fa-solid fa-stamp"></i> 請求書発行</button>
+        <button id="btnInvPrint"   class="btn ghost"><i class="fa-solid fa-print"></i> 印刷</button>
+        <button id="btnInvCSV"     class="btn ghost"><i class="fa-solid fa-file-csv"></i> CSV</button>
       </div>
     </section>
+
     <section class="card">
       <h3>請求明細（編集可：単価）</h3>
       <div class="table-wrap">
@@ -393,250 +397,66 @@
     </footer>
   </dialog>
 
-  <!-- ===== (ADD) Script Cuaca: Open-Meteo + BigDataCloud (tanpa API key) ===== -->
+  <!-- ===== Cuaca: Open-Meteo + BigDataCloud ===== -->
   <script>
   (async function weatherInit(){
     const elCity = document.getElementById('wxCity');
     const elTemp = document.getElementById('wxTemp');
     const elIcon = document.getElementById('wxIcon');
-
     const fallback = { lat:35.6809591, lon:139.7673068, city:'東京' };
     const geoOpts = { enableHighAccuracy:false, timeout:6000, maximumAge:300000 };
-
-    function svg(parts){
-      return `<svg viewBox="0 0 24 24" class="wx-ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${parts}</g></svg>`;
-    }
+    const svg = parts => `<svg viewBox="0 0 24 24" class="wx-ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${parts}</g></svg>`;
     const ICONS = {
       sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
-      cloud: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 8H8a4 4 0 0 1-2-7.5"/>'),
+      cloud: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 8H8a4 4 0 0 1-2-3"/>'),
       sunCloud: svg('<circle cx="6" cy="6" r="2.5"/><path d="M6 1.5v1.5M6 12V10.5M1.5 6H3M9 6h1.5M3.8 3.8l1 1M7.2 7.2l1 1"/><path d="M9 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 21 10a4 4 0 0 1 0 6h-8a4 4 0 0 1-2-3"/>'),
       drizzle: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 6H8a4 4 0 0 1-2-3"/><path d="M9 21l.6-1.6M12.5 21l.6-1.6M15.8 21l.6-1.6"/>'),
       rain: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 6H8a4 4 0 0 1-2-3"/><path d="M9 22l1-3M13 22l1-3M17 22l1-3"/>'),
       snow: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 6H8a4 4 0 0 1-2-3"/><path d="M12 21v-3M12 18l-1.5-1M12 18l1.5-1M12 21l-1.5 1M12 21l1.5 1"/>'),
       thunder: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 6H8a4 4 0 0 1-2-3"/><path d="M12 12l-2 4h3l-1 4l4-6h-3l1-2z"/>')
     };
-    function codeToIcon(c){
+    const codeToIcon = c => {
       c = Number(c);
-      if ([0].includes(c)) return ICONS.sun;
-      if ([1,2].includes(c)) return ICONS.sunCloud;
-      if ([3].includes(c)) return ICONS.cloud;
-      if ([45,48].includes(c)) return ICONS.drizzle;
-      if ([51,53,55,56,57].includes(c)) return ICONS.drizzle;
-      if ([61,63,65,66,67,80,81,82].includes(c)) return ICONS.rain;
-      if ([71,73,75,77,85,86].includes(c)) return ICONS.snow;
-      if ([95,96,99].includes(c)) return ICONS.thunder;
+      if([0].includes(c)) return ICONS.sun;
+      if([1,2].includes(c)) return ICONS.sunCloud;
+      if([3].includes(c))   return ICONS.cloud;
+      if([45,48].includes(c)) return ICONS.drizzle;
+      if([51,53,55,56,57].includes(c)) return ICONS.drizzle;
+      if([61,63,65,66,67,80,81,82].includes(c)) return ICONS.rain;
+      if([71,73,75,77,85,86].includes(c)) return ICONS.snow;
+      if([95,96,99].includes(c)) return ICONS.thunder;
       return ICONS.cloud;
-    }
-
-    function getGeo(){
-      return new Promise(res=>{
-        if(!navigator.geolocation) return res(null);
-        navigator.geolocation.getCurrentPosition(
-          p=>res({lat:p.coords.latitude, lon:p.coords.longitude}),
-          _=>res(null),
-          geoOpts
-        );
-      });
-    }
-    async function getCity(lat, lon){
+    };
+    const getGeo = () => new Promise(res=>{
+      if(!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition(
+        p=>res({lat:p.coords.latitude, lon:p.coords.longitude}),
+        _=>res(null),
+        geoOpts
+      );
+    });
+    const getCity = async (lat, lon) => {
       try{
         const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
         const j = await r.json();
-        const name = j.city || j.locality || j.principalSubdivision || j.countryName || '—';
-        return name;
+        return j.city || j.locality || j.principalSubdivision || j.countryName || '—';
       }catch{ return fallback.city; }
-    }
-    async function getWeather(lat, lon){
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
-      const r = await fetch(url, {cache:'no-store'});
-      const j = await r.json();
-      return j.current_weather;
-    }
-    function render(city, cw){
+    };
+    const getWeather = async (lat, lon) => {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`, {cache:'no-store'});
+      const j = await r.json(); return j.current_weather;
+    };
+    const render = (city, cw) => {
       elCity.textContent = city || '—';
-      const t = (cw && typeof cw.temperature === 'number') ? Math.round(cw.temperature) : NaN;
-      elTemp.textContent = (isFinite(t) ? t : '--') + '℃';
+      const t = (cw && typeof cw.temperature==='number')? Math.round(cw.temperature) : NaN;
+      elTemp.textContent = (isFinite(t)? t : '--') + '℃';
       elIcon.innerHTML = codeToIcon(cw?.weathercode ?? 3);
-    }
-
+    };
     try{
-      const g = await getGeo();
-      const lat = g?.lat ?? fallback.lat;
-      const lon = g?.lon ?? fallback.lon;
-      const [city, cw] = await Promise.all([getCity(lat, lon), getWeather(lat, lon)]);
+      const g = await getGeo(); const lat = g?.lat ?? fallback.lat; const lon = g?.lon ?? fallback.lon;
+      const [city, cw] = await Promise.all([getCity(lat,lon), getWeather(lat,lon)]);
       render(city || fallback.city, cw);
-    }catch(e){
-      render(fallback.city, null);
-    }
-  })();
-  </script>
-  <!-- ===== /Script Cuaca ===== -->
-
-  <script>
-  (function(){
-    // --- UTIL ---
-    const NG_RX = /(NG|不良|異常|不適合)/i;
-    const STATUS_KEYS = [
-      { key:'出荷済', rx:/出荷/ },
-      { key:'検査', rx:/検査/ },
-      { key:'組立', rx:/組立/ },
-      { key:'加工', rx:/加工/ },
-      { key:'準備', rx:/準備/ },
-      { key:'その他', rx:/.*/ }
-    ];
-    const pad = n => String(n).padStart(2,'0');
-    function parseJPDate(s){
-      if(!s) return null;
-      s = String(s).trim();
-      const m = s.match(/^(\d{4})\D(\d{1,2})\D(\d{1,2})(?:\D(\d{1,2})\D(\d{1,2}))?/);
-      if(m){ return new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0)); }
-      const d = new Date(s); return isNaN(d)? null : d;
-    }
-    const monthKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-
-    // --- BACA TABEL DAN AKUMULASI ---
-    function collectFromOrders(){
-      const rows = document.querySelectorAll('#tbOrders tr');
-      const COL_CUSTOMER = 1, COL_STATUS = 5, COL_UPDATED = 6;
-      const byMonth = new Map(); const byCustomer = new Map();
-      const byStatus = new Map(); const byProc = new Map();
-
-      rows.forEach(tr=>{
-        const tds = tr.querySelectorAll('td'); if(tds.length === 0) return;
-        const cust = (tds[COL_CUSTOMER]?.textContent||'').trim() || '—';
-        const status = (tds[COL_STATUS]?.textContent||'').trim();
-        const updated = (tds[COL_UPDATED]?.textContent||'').trim();
-        const d = parseJPDate(updated) || new Date();
-        const mk = monthKey(d);
-        const isNG = NG_RX.test(status);
-
-        const bm = byMonth.get(mk) || { total:0, ng:0 };
-        bm.total += 1; bm.ng += isNG ? 1 : 0;
-        byMonth.set(mk, bm);
-
-        byCustomer.set(cust, (byCustomer.get(cust)||0) + 1);
-
-        let g = 'その他';
-        for(const s of STATUS_KEYS){ if(s.rx.test(status)){ g = s.key; break; } }
-        byStatus.set(g, (byStatus.get(g)||0) + 1);
-        byProc.set(g, (byProc.get(g)||0) + 1);
-      });
-      return { byMonth, byCustomer, byStatus, byProc };
-    }
-
-    function collectFromSales(){
-      const rows = document.querySelectorAll('#tbSales tr');
-      const COL_DATE = 1;
-      const byMonth = new Map();
-      rows.forEach(tr=>{
-        const tds = tr.querySelectorAll('td'); if(!tds.length) return;
-        const d = parseJPDate((tds[COL_DATE]?.textContent||'').trim()); if(!d) return;
-        const mk = monthKey(d); byMonth.set(mk, (byMonth.get(mk)||0) + 1);
-      });
-      return { byMonth };
-    }
-
-    function sortMonthKeys(keys){ return keys.sort((a,b)=> a.localeCompare(b)); }
-
-    // --- INISIALISASI CHART SEKALI ---
-    let _chartsInited = false;
-    function initChartsOnce(){
-      if(_chartsInited || !window.Chart) return; _chartsInited = true;
-      const ord = collectFromOrders(); const sal = collectFromSales();
-      const keysSet = new Set([...ord.byMonth.keys(), ...sal.byMonth.keys()]);
-      const keys = sortMonthKeys(Array.from(keysSet));
-      const totalArr = keys.map(k => (ord.byMonth.get(k)?.total)||0);
-      const ngArr = keys.map(k => (ord.byMonth.get(k)?.ng)||0);
-      const soArr = keys.map(k => (sal.byMonth.get(k)||0));
-
-      const custEntries = Array.from(ord.byCustomer.entries()).sort((a,b)=>b[1]-a[1]).slice(0,8);
-      const custLabels = custEntries.map(([k])=>k);
-      const custVals = custEntries.map(([,v])=>v);
-
-      const stEntries = Array.from(ord.byStatus.entries()).sort((a,b)=>b[1]-a[1]);
-      const stLabels = stEntries.map(([k])=>k);
-      const stVals = stEntries.map(([,v])=>v);
-
-      const elMonthly = document.getElementById('chMonthly');
-      if (elMonthly){
-        new Chart(elMonthly.getContext('2d'), {
-          type: 'bar',
-          data: {
-            labels: keys.length? keys : ['データなし'],
-            datasets: [
-              { label:'出荷件数', data: keys.length? totalArr : [0] },
-              { label:'NG件数', data: keys.length? ngArr : [0], type:'line', tension:.3 }
-            ]
-          },
-          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true } } }
-        });
-      }
-
-      const elCustomer = document.getElementById('chCustomer');
-      if (elCustomer){
-        new Chart(elCustomer.getContext('2d'), {
-          type:'pie',
-          data:{ labels: custLabels.length? custLabels : ['データなし'], datasets:[{ data: custLabels.length? custVals : [1] }] },
-          options:{ responsive:true, maintainAspectRatio:false }
-        });
-      }
-
-      const elStock = document.getElementById('chStock');
-      if (elStock){
-        new Chart(elStock.getContext('2d'), {
-          type:'doughnut',
-          data:{ labels: stLabels.length? stLabels : ['データなし'], datasets:[{ data: stLabels.length? stVals : [1] }] },
-          options:{ responsive:true, maintainAspectRatio:false }
-        });
-      }
-
-      const elWip = document.getElementById('chWipProc');
-      if (elWip){
-        new Chart(elWip.getContext('2d'), {
-          type:'bar',
-          data:{ labels: stLabels.length? stLabels : ['データなし'], datasets:[{ label:'WIP', data: stLabels.length? stVals : [0]}]},
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-        });
-      }
-
-      const elSales = document.getElementById('chSales');
-      if (elSales){
-        new Chart(elSales.getContext('2d'), {
-          type:'line',
-          data:{ labels: keys.length? keys : ['データなし'], datasets:[{ label:'受注', data: keys.length? soArr : [0], tension:.3 }] },
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
-        });
-      }
-
-      const elPlan = document.getElementById('chPlan');
-      if (elPlan){
-        new Chart(elPlan.getContext('2d'), {
-          type:'line',
-          data:{ labels: keys.length? keys : ['データなし'], datasets:[{ label:'計画', data: keys.length? soArr.map(v=>Math.max(0, v-1)) : [0], tension:.3 }] },
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
-        });
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=>{
-      const btnCharts = document.getElementById('btnToCharts');
-      if (btnCharts){
-        btnCharts.classList.remove('hidden');
-        btnCharts.addEventListener('click', ()=>{
-          const pages = [ 'authView','pageDash','pageSales','pagePlan','pageShip','pageInventory','pageFinished','pageInvoice','pageCharts' ];
-          pages.forEach(id => document.getElementById(id)?.classList.add('hidden'));
-          document.getElementById('pageCharts')?.classList.remove('hidden');
-          initChartsOnce();
-        });
-      }
-      if (!document.getElementById('pageCharts')?.classList.contains('hidden')){ initChartsOnce(); }
-    });
-
-    const tbOrders = document.getElementById('tbOrders');
-    if (tbOrders && 'MutationObserver' in window){
-      const mo = new MutationObserver(()=>{ /* refresh chart saat user buka charts */ });
-      mo.observe(tbOrders, { childList:true, subtree:false });
-    }
+    }catch{ render(fallback.city, null); }
   })();
   </script>
 
