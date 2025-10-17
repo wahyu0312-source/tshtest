@@ -238,22 +238,35 @@ async function initWeather(){
 }
 
 /* ===== Boot ===== */
+/* ===== Boot ===== */
 window.addEventListener('DOMContentLoaded', ()=>{
+
   // routing tombol — tidak meng-unhide; unhide dilakukan saat login di enter()
-  const map={
-    btnToDash: ()=> show('pageDash'),
-    btnToSales: ()=> show('pageSales'),
-    btnToPlan: ()=> show('pagePlan'),
-    btnToShip: ()=> show('pageShip'),
-    btnToInvPage: ()=> { show('pageInventory'); renderInventory(); },
-    btnToFinPage: ()=> { show('pageFinished'); renderFinished(); },
-    btnToInvoice: ()=> show('pageInvoice'),
+  const map = {
+    btnToDash:   ()=> show('pageDash'),
+    btnToSales:  ()=> show('pageSales'),
+    btnToPlan:   ()=> show('pagePlan'),
+    btnToShip:   ()=> show('pageShip'),
+    btnToInvPage:()=> { show('pageInventory'); renderInventory(); },
+    btnToFinPage:()=> { show('pageFinished'); renderFinished(); },
+    btnToInvoice:()=> show('pageInvoice'),
     btnToCharts: ()=> { show('pageCharts'); ensureChartsLoaded(); }
-      // 注番 source selector (plan)
+  }; // ← IMPORTANT: close the object literal here
+
+  // pasang handler tombol
+  Object.keys(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = map[id];
+  });
+
+  // 注番 source selector (plan)
   initChubanSelector();
 
-  // --- TAMBAHKAN BARIS INI DI SINI ---
+  // Weather chip (nama kota & suhu)
   initWeather();
+
+  // (lanjut: Settings, Auth, Dashboard, Sales, Plan, Ship, Invoice, Charts, etc...)
+  // ...
 });
 
   };
