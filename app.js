@@ -58,15 +58,6 @@ const PROC_CLASS = {
   "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out","検査工程":"prc-inspect"
 };
 
-/* ===== Service Worker register ===== */
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", ()=>{
-    navigator.serviceWorker.getRegistration().then(reg=>{
-      if(!reg){ navigator.serviceWorker.register("./sw.js").catch(console.warn); }
-    });
-  });
-}
-
 /* ===== SWR Cache (localStorage) ===== */
 const SWR = {
   get(key){ try{ const x=localStorage.getItem(key); return x? JSON.parse(x):null;}catch(e){return null;} },
@@ -1087,5 +1078,11 @@ function handleImport(e, type){
   else       reader.readAsArrayBuffer(file);
 }
 
-/* ===== Ensure charts loader alias (if referenced early) ===== */
-function ensureChartsLoaded(){ renderCharts().catch(console.warn); }
+/* ===== Service Worker register ===== */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(!reg){ navigator.serviceWorker.register("./sw.js").catch(console.warn); }
+    });
+  });
+}
