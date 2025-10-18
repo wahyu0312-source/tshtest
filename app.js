@@ -42,8 +42,24 @@ const STATION_RULES = {
 
 /* ===== Shortcuts ===== */
 const $     = (s)=> document.querySelector(s);
-const fmtDT = (s)=> s ? new Date(s).toLocaleString() : "";
-const fmtD  = (s)=> s ? new Date(s).toLocaleDateString() : "";
+const fmtDT = (s)=> {
+  if(!s) return "";
+  const d = new Date(s);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  return `${y}/${m}/${da} ${hh}:${mm}`;
+};
+const fmtD  = (s)=> {
+  if(!s) return "";
+  const d = new Date(s);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  return `${y}/${m}/${da}`;
+};
 let SESSION=null, CURRENT_PO=null, scanStream=null, scanTimer=null;
 let INV_PREVIEW={info:null, lines:[]};
 
