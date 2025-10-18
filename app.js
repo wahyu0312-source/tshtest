@@ -42,27 +42,8 @@ const STATION_RULES = {
 
 /* ===== Shortcuts ===== */
 const $     = (s)=> document.querySelector(s);
-
-// === FORMAT TANGGAL === (YYYY/MM/DD & YYYY/MM/DD HH:mm)
-const fmtDT = (s)=> {
-  if(!s) return "";
-  const d = new Date(s);
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const da = String(d.getDate()).padStart(2,"0");
-  const hh = String(d.getHours()).padStart(2,"0");
-  const mm = String(d.getMinutes()).padStart(2,"0");
-  return `${y}/${m}/${da} ${hh}:${mm}`;
-};
-const fmtD  = (s)=> {
-  if(!s) return "";
-  const d = new Date(s);
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const da = String(d.getDate()).padStart(2,"0");
-  return `${y}/${m}/${da}`;
-};
-
+const fmtDT = (s)=> s ? new Date(s).toLocaleString() : "";
+const fmtD  = (s)=> s ? new Date(s).toLocaleDateString() : "";
 let SESSION=null, CURRENT_PO=null, scanStream=null, scanTimer=null;
 let INV_PREVIEW={info:null, lines:[]};
 
@@ -187,83 +168,33 @@ function tableSkeleton(tbody, rows=7, cols=8){
 }
 function clearSkeleton(tbody){ if(tbody) tbody.innerHTML=""; }
 
-/* ===== Weather (Open-Meteo, no key) — improved retry & UX ===== */
-/* ===== Weather (Open-Meteo) — robust with fallback & retry ===== */
-let __wxBusy = false;
+/* ===== Weather (Open-Meteo, no key) ===== */
 async function initWeather(){
   const elPlace = document.getElementById("wxPlace") || document.querySelector('[data-wx="place"]');
   const elTemp  = document.getElementById("wxTemp")  || document.querySelector('[data-wx="temp"]');
-  const pill    = document.getElementById("weather");
-  if (!elPlace && !elTemp) return;
+  if((!elPlace && !elTemp) || !("geolocation" in navigator)) return;
 
-  const fallback = { lat: 35.6895, lon: 139.6917, city: "東京" }; // default: Tokyo
-
-  const setUI   = (city, temp)=>{
-    if (elPlace) elPlace.textContent = city || "現在地";
-    if (elTemp)  elTemp.textContent  = (temp != null ? Math.round(temp) + "℃" : "--℃");
-  };
-  const setHint = (msg)=>{
-    if (pill){ pill.title = msg || ""; pill.style.cursor = "pointer"; }
-  };
-
-  // Retry on click — bind sekali
-  if (pill && !pill.__wxRetryBound){
-    pill.__wxRetryBound = true;
-    pill.addEventListener("click", ()=>{ if (!__wxBusy) initWeather(); });
-  }
-
-  // Helper ambil cuaca + nama kota
-  async function fetchWx(lat, lon){
-    const wx  = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`).then(r=>r.json());
-    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ja`).then(r=>r.json());
-    const temp = wx?.current?.temperature_2m ?? null;
-    const city = rev?.results?.[0]?.name || rev?.results?.[0]?.admin1 || fallback.city;
-    return { city, temp };
+  function setUI(city, temp){
+    if(elPlace) elPlace.textContent = city || "現在地";
+    if(elTemp)  elTemp.textContent  = (temp!=null ? Math.round(temp)+"℃" : "--");
   }
 
   try{
-    __wxBusy = true;
-    setHint("現在の天気（クリックで再取得）");
-    setUI("取得中…", null);
+    const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
+    const { latitude, longitude } = pos.coords;
 
-    // Minta posisi (timeout 8 detik)
-    const pos = await new Promise((res, rej)=>{
-      const t = setTimeout(()=> rej(new Error("PERM_TIMEOUT")), 8000);
-      navigator.geolocation.getCurrentPosition(
-        r=>{ clearTimeout(t); res(r); },
-        e=>{ clearTimeout(t); rej(e); },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`).then(r=>r.json());
+    const temp = wx && wx.current ? wx.current.temperature_2m : null;
 
-    const { latitude, longitude } = pos.coords || {};
-    // simpan last known
-    localStorage.setItem("wx_last", JSON.stringify({ lat: latitude, lon: longitude }));
+    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`).then(r=>r.json());
+    const city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
 
-    const { city, temp } = await fetchWx(latitude, longitude);
     setUI(city, temp);
   }catch(e){
-    console.warn("weather fail:", e);
-
-    // Fallback: last known -> Tokyo
-    const last = (()=>{ try{ return JSON.parse(localStorage.getItem("wx_last")); }catch{ return null; } })();
-    const lat  = last?.lat ?? fallback.lat;
-    const lon  = last?.lon ?? fallback.lon;
-
-    try{
-      const { city, temp } = await fetchWx(lat, lon);
-      const tag = last ? "（前回の位置）" : "（推定）";
-      setUI(`${city}${tag}`, temp);
-      setHint("位置情報がブロックされています。許可するか、クリックで再試行。");
-    }catch(e2){
-      setUI(fallback.city, null);
-      setHint("天気の取得に失敗しました。クリックで再試行。");
-    }
-  }finally{
-    __wxBusy = false;
+    console.warn("weather:", e);
+    setUI("現在地", null);
   }
 }
-
 
 /* ===== Small utils ===== */
 function debounce(fn, ms = 150) {
@@ -441,13 +372,12 @@ function onGlobalShortcut(e){
     const id=dlg.id;
     if(id==="dlgHistory"){
       const inp=dlg.querySelectorAll('input[type="date"]');
-      inp.forEach(x=> x.value="");  // ← diperbaiki (tadinya kurang ")")
+      inp.forEach(x=> x.value="");
       const q=dlg.querySelector('input[type="text"]'); if(q) q.value="";
       const list=dlg.querySelector("#histBody"); if(list) list.innerHTML="";
     }
   }
 }
-
 
 /* ===== Enter (unhide navbar setelah login) ===== */
 function enter(){
@@ -648,68 +578,6 @@ async function renderSales(){
     </tr>`).join("");
 }
 
-// === Sales CRUD (patch ReferenceError) ===
-function _val(id){ const el = document.querySelector(id); return el ? el.value.trim() : ""; }
-function _num(id){ const el = document.querySelector(id); return Number(el && el.value ? el.value : 0) || 0; }
-
-async function saveSalesUI(){
-  if(!SESSION) return alert("ログインしてください");
-  const so_id = _val("#so_id");
-  const payload = {
-    "受注日": _val("#so_date"),
-    "得意先": _val("#so_cust"),
-    "品名":   _val("#so_item"),
-    "品番":   _val("#so_part"),
-    "図番":   _val("#so_drw"),
-    "製番号": _val("#so_sei"),
-    "数量":   _num("#so_qty"),
-    "希望納期": _val("#so_req"),
-    "備考":   _val("#so_note")
-  };
-  try{
-    if(so_id){
-      await apiPost("updateSales", { so_id, updates: payload, user: SESSION });
-      alert("編集保存しました");
-    }else{
-      const r = await apiPost("createSales", { payload, user: SESSION });
-      const idEl = document.querySelector("#so_id"); if(idEl) idEl.value = r.so_id || "";
-      alert("作成: " + (r.so_id || ""));
-    }
-    await renderSales();
-  }catch(e){ alert(e.message||e); }
-}
-
-async function deleteSalesUI(){
-  if(!SESSION) return alert("ログインしてください");
-  const so_id = _val("#so_id");
-  if(!so_id) return alert("注番（受注）を入力してください");
-  if(!confirm("削除しますか？")) return;
-  try{
-    const r = await apiPost("deleteSales", { so_id, user: SESSION });
-    alert("削除: " + (r.deleted || so_id));
-    const idEl = document.querySelector("#so_id"); if(idEl) idEl.value = "";
-    await renderSales();
-  }catch(e){ alert(e.message||e); }
-}
-
-async function exportSalesCSV(){
-  try{
-    const rows = await apiGet({ action:"listSales" }, { swrKey:"sales" });
-    downloadCSV("sales.csv", rows);
-  }catch(e){ alert(e.message||e); }
-}
-
-async function promoteSalesUI(){
-  if(!SESSION) return alert("ログインしてください");
-  const so_id = _val("#so_id");
-  if(!so_id) return alert("注番（受注）を入力してください");
-  try{
-    const r = await apiPost("promoteSales", { so_id, user: SESSION });
-    alert("計画に変換しました: " + (r.po_id || r.linked_po_id || so_id));
-    await renderSales();
-  }catch(e){ alert(e.message||e); }
-}
-
 /* ===== 注番 selector from 受注 ===== */
 async function populateChubanFromSales(){
   const dl = document.getElementById("dl_po_from_so"); if(!dl) return;
@@ -861,7 +729,7 @@ async function openShipByID(id){
 function showShipDoc(s,o){
   const dt=s.scheduled_date? new Date(s.scheduled_date):null;
   const body=`<h3>出荷確認書</h3><table>
-    <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>出荷日</th><td>${dt?fmtD(dt):"-"}</td></tr>
+    <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>出荷日</th><td>${dt?dt.toLocaleDateString():"-"}</td></tr>
     <tr><th>注番</th><td>${s.po_id}</td><th>数量</th><td>${s.qty||0}</td></tr>
     <tr><th>品名</th><td>${o["品名"]||""}</td><th>品番/図番</th><td>${(o["品番"]||"")+" / "+(o["図番"]||"")}</td></tr>
     <tr><th>状態</th><td colspan="3">${o.status||""}</td></tr></table>`;
@@ -875,7 +743,7 @@ async function openTicket(po_id){
     const body=`<h3>生産現品票</h3><table>
       <tr><th>管理No</th><td>${o["管理No"]||"-"}</td><th>通知書番号</th><td>${o["通知書番号"]||"-"}</td></tr>
       <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>得意先品番</th><td>${o["得意先品番"]||""}</td></tr>
-      <tr><th>製番号</th><td>${o["製番号"]||""}</td><th>投入日</th><td>${o["created_at"]?fmtD(o["created_at"]):"-"}</td></tr>
+      <tr><th>製番号</th><td>${o["製番号"]||""}</td><th>投入日</th><td>${o["created_at"]?new Date(o["created_at"]).toLocaleDateString():"-"}</td></tr>
       <tr><th>品名</th><td>${o["品名"]||""}</td><th>品番/図番</th><td>${(o["品番"]||"")+" / "+(o["図番"]||"")}</td></tr>
       <tr><th>工程</th><td colspan="3">${o.current_process||""}</td></tr>
       <tr><th>状態</th><td>${o.status||""}</td><th>更新</th><td>${fmtDT(o.updated_at)} / ${o.updated_by||""}</td></tr></table>`;
