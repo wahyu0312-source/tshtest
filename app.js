@@ -188,24 +188,37 @@ function tableSkeleton(tbody, rows=7, cols=8){
 function clearSkeleton(tbody){ if(tbody) tbody.innerHTML=""; }
 
 /* ===== Weather (Open-Meteo, no key) — improved retry & UX ===== */
+/* ===== Weather (Open-Meteo) — robust with fallback & retry ===== */
 let __wxBusy = false;
 async function initWeather(){
   const elPlace = document.getElementById("wxPlace") || document.querySelector('[data-wx="place"]');
   const elTemp  = document.getElementById("wxTemp")  || document.querySelector('[data-wx="temp"]');
   const pill    = document.getElementById("weather");
-  if((!elPlace && !elTemp)) return;
+  if (!elPlace && !elTemp) return;
 
-  function setUI(city, temp){
-    if(elPlace) elPlace.textContent = city || "現在地";
-    if(elTemp)  elTemp.textContent  = (temp!=null ? Math.round(temp)+"℃" : "--℃");
-  }
-  function setHint(msg){
-    if(pill){ pill.title = msg || ""; pill.style.cursor = "pointer"; }
-  }
-  // enable manual retry
-  if(pill && !pill.__wxRetryBound){
+  const fallback = { lat: 35.6895, lon: 139.6917, city: "東京" }; // default: Tokyo
+
+  const setUI   = (city, temp)=>{
+    if (elPlace) elPlace.textContent = city || "現在地";
+    if (elTemp)  elTemp.textContent  = (temp != null ? Math.round(temp) + "℃" : "--℃");
+  };
+  const setHint = (msg)=>{
+    if (pill){ pill.title = msg || ""; pill.style.cursor = "pointer"; }
+  };
+
+  // Retry on click — bind sekali
+  if (pill && !pill.__wxRetryBound){
     pill.__wxRetryBound = true;
-    pill.addEventListener("click", ()=>{ if(!__wxBusy) initWeather(); });
+    pill.addEventListener("click", ()=>{ if (!__wxBusy) initWeather(); });
+  }
+
+  // Helper ambil cuaca + nama kota
+  async function fetchWx(lat, lon){
+    const wx  = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`).then(r=>r.json());
+    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ja`).then(r=>r.json());
+    const temp = wx?.current?.temperature_2m ?? null;
+    const city = rev?.results?.[0]?.name || rev?.results?.[0]?.admin1 || fallback.city;
+    return { city, temp };
   }
 
   try{
@@ -213,28 +226,44 @@ async function initWeather(){
     setHint("現在の天気（クリックで再取得）");
     setUI("取得中…", null);
 
-    const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
-    const { latitude, longitude } = pos.coords;
+    // Minta posisi (timeout 8 detik)
+    const pos = await new Promise((res, rej)=>{
+      const t = setTimeout(()=> rej(new Error("PERM_TIMEOUT")), 8000);
+      navigator.geolocation.getCurrentPosition(
+        r=>{ clearTimeout(t); res(r); },
+        e=>{ clearTimeout(t); rej(e); },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
 
-    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`).then(r=>r.json());
-    const temp = wx && wx.current ? wx.current.temperature_2m : null;
+    const { latitude, longitude } = pos.coords || {};
+    // simpan last known
+    localStorage.setItem("wx_last", JSON.stringify({ lat: latitude, lon: longitude }));
 
-    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`).then(r=>r.json());
-    const city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
-
+    const { city, temp } = await fetchWx(latitude, longitude);
     setUI(city, temp);
   }catch(e){
-    console.warn("weather:", e);
-    // Pesan yang lebih jelas saat permission ditolak/timeout
-    const msg = (e && (e.code===1 || /denied/i.test(e.message))) 
-      ? "位置情報がブロックされています。クリックして再試行し、ブラウザで許可してください。"
-      : "天気情報の取得に失敗しました。クリックで再試行。";
-    setUI("現在地", null);
-    setHint(msg);
+    console.warn("weather fail:", e);
+
+    // Fallback: last known -> Tokyo
+    const last = (()=>{ try{ return JSON.parse(localStorage.getItem("wx_last")); }catch{ return null; } })();
+    const lat  = last?.lat ?? fallback.lat;
+    const lon  = last?.lon ?? fallback.lon;
+
+    try{
+      const { city, temp } = await fetchWx(lat, lon);
+      const tag = last ? "（前回の位置）" : "（推定）";
+      setUI(`${city}${tag}`, temp);
+      setHint("位置情報がブロックされています。許可するか、クリックで再試行。");
+    }catch(e2){
+      setUI(fallback.city, null);
+      setHint("天気の取得に失敗しました。クリックで再試行。");
+    }
   }finally{
     __wxBusy = false;
   }
 }
+
 
 /* ===== Small utils ===== */
 function debounce(fn, ms = 150) {
