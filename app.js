@@ -42,6 +42,8 @@ const STATION_RULES = {
 
 /* ===== Shortcuts ===== */
 const $     = (s)=> document.querySelector(s);
+
+// === FORMAT TANGGAL === (YYYY/MM/DD & YYYY/MM/DD HH:mm)
 const fmtDT = (s)=> {
   if(!s) return "";
   const d = new Date(s);
@@ -60,6 +62,7 @@ const fmtD  = (s)=> {
   const da = String(d.getDate()).padStart(2,"0");
   return `${y}/${m}/${da}`;
 };
+
 let SESSION=null, CURRENT_PO=null, scanStream=null, scanTimer=null;
 let INV_PREVIEW={info:null, lines:[]};
 
@@ -184,18 +187,32 @@ function tableSkeleton(tbody, rows=7, cols=8){
 }
 function clearSkeleton(tbody){ if(tbody) tbody.innerHTML=""; }
 
-/* ===== Weather (Open-Meteo, no key) ===== */
+/* ===== Weather (Open-Meteo, no key) — improved retry & UX ===== */
+let __wxBusy = false;
 async function initWeather(){
   const elPlace = document.getElementById("wxPlace") || document.querySelector('[data-wx="place"]');
   const elTemp  = document.getElementById("wxTemp")  || document.querySelector('[data-wx="temp"]');
-  if((!elPlace && !elTemp) || !("geolocation" in navigator)) return;
+  const pill    = document.getElementById("weather");
+  if((!elPlace && !elTemp)) return;
 
   function setUI(city, temp){
     if(elPlace) elPlace.textContent = city || "現在地";
-    if(elTemp)  elTemp.textContent  = (temp!=null ? Math.round(temp)+"℃" : "--");
+    if(elTemp)  elTemp.textContent  = (temp!=null ? Math.round(temp)+"℃" : "--℃");
+  }
+  function setHint(msg){
+    if(pill){ pill.title = msg || ""; pill.style.cursor = "pointer"; }
+  }
+  // enable manual retry
+  if(pill && !pill.__wxRetryBound){
+    pill.__wxRetryBound = true;
+    pill.addEventListener("click", ()=>{ if(!__wxBusy) initWeather(); });
   }
 
   try{
+    __wxBusy = true;
+    setHint("現在の天気（クリックで再取得）");
+    setUI("取得中…", null);
+
     const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
     const { latitude, longitude } = pos.coords;
 
@@ -208,7 +225,14 @@ async function initWeather(){
     setUI(city, temp);
   }catch(e){
     console.warn("weather:", e);
+    // Pesan yang lebih jelas saat permission ditolak/timeout
+    const msg = (e && (e.code===1 || /denied/i.test(e.message))) 
+      ? "位置情報がブロックされています。クリックして再試行し、ブラウザで許可してください。"
+      : "天気情報の取得に失敗しました。クリックで再試行。";
     setUI("現在地", null);
+    setHint(msg);
+  }finally{
+    __wxBusy = false;
   }
 }
 
@@ -388,7 +412,7 @@ function onGlobalShortcut(e){
     const id=dlg.id;
     if(id==="dlgHistory"){
       const inp=dlg.querySelectorAll('input[type="date"]');
-      inp.forEach(x=> x.value="");
+      inp.forEach(x=> x.value="";
       const q=dlg.querySelector('input[type="text"]'); if(q) q.value="";
       const list=dlg.querySelector("#histBody"); if(list) list.innerHTML="";
     }
@@ -594,6 +618,68 @@ async function renderSales(){
     </tr>`).join("");
 }
 
+// === Sales CRUD (patch ReferenceError) ===
+function _val(id){ const el = document.querySelector(id); return el ? el.value.trim() : ""; }
+function _num(id){ const el = document.querySelector(id); return Number(el && el.value ? el.value : 0) || 0; }
+
+async function saveSalesUI(){
+  if(!SESSION) return alert("ログインしてください");
+  const so_id = _val("#so_id");
+  const payload = {
+    "受注日": _val("#so_date"),
+    "得意先": _val("#so_cust"),
+    "品名":   _val("#so_item"),
+    "品番":   _val("#so_part"),
+    "図番":   _val("#so_drw"),
+    "製番号": _val("#so_sei"),
+    "数量":   _num("#so_qty"),
+    "希望納期": _val("#so_req"),
+    "備考":   _val("#so_note")
+  };
+  try{
+    if(so_id){
+      await apiPost("updateSales", { so_id, updates: payload, user: SESSION });
+      alert("編集保存しました");
+    }else{
+      const r = await apiPost("createSales", { payload, user: SESSION });
+      const idEl = document.querySelector("#so_id"); if(idEl) idEl.value = r.so_id || "";
+      alert("作成: " + (r.so_id || ""));
+    }
+    await renderSales();
+  }catch(e){ alert(e.message||e); }
+}
+
+async function deleteSalesUI(){
+  if(!SESSION) return alert("ログインしてください");
+  const so_id = _val("#so_id");
+  if(!so_id) return alert("注番（受注）を入力してください");
+  if(!confirm("削除しますか？")) return;
+  try{
+    const r = await apiPost("deleteSales", { so_id, user: SESSION });
+    alert("削除: " + (r.deleted || so_id));
+    const idEl = document.querySelector("#so_id"); if(idEl) idEl.value = "";
+    await renderSales();
+  }catch(e){ alert(e.message||e); }
+}
+
+async function exportSalesCSV(){
+  try{
+    const rows = await apiGet({ action:"listSales" }, { swrKey:"sales" });
+    downloadCSV("sales.csv", rows);
+  }catch(e){ alert(e.message||e); }
+}
+
+async function promoteSalesUI(){
+  if(!SESSION) return alert("ログインしてください");
+  const so_id = _val("#so_id");
+  if(!so_id) return alert("注番（受注）を入力してください");
+  try{
+    const r = await apiPost("promoteSales", { so_id, user: SESSION });
+    alert("計画に変換しました: " + (r.po_id || r.linked_po_id || so_id));
+    await renderSales();
+  }catch(e){ alert(e.message||e); }
+}
+
 /* ===== 注番 selector from 受注 ===== */
 async function populateChubanFromSales(){
   const dl = document.getElementById("dl_po_from_so"); if(!dl) return;
@@ -745,7 +831,7 @@ async function openShipByID(id){
 function showShipDoc(s,o){
   const dt=s.scheduled_date? new Date(s.scheduled_date):null;
   const body=`<h3>出荷確認書</h3><table>
-    <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>出荷日</th><td>${dt?dt.toLocaleDateString():"-"}</td></tr>
+    <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>出荷日</th><td>${dt?fmtD(dt):"-"}</td></tr>
     <tr><th>注番</th><td>${s.po_id}</td><th>数量</th><td>${s.qty||0}</td></tr>
     <tr><th>品名</th><td>${o["品名"]||""}</td><th>品番/図番</th><td>${(o["品番"]||"")+" / "+(o["図番"]||"")}</td></tr>
     <tr><th>状態</th><td colspan="3">${o.status||""}</td></tr></table>`;
@@ -759,7 +845,7 @@ async function openTicket(po_id){
     const body=`<h3>生産現品票</h3><table>
       <tr><th>管理No</th><td>${o["管理No"]||"-"}</td><th>通知書番号</th><td>${o["通知書番号"]||"-"}</td></tr>
       <tr><th>得意先</th><td>${o["得意先"]||""}</td><th>得意先品番</th><td>${o["得意先品番"]||""}</td></tr>
-      <tr><th>製番号</th><td>${o["製番号"]||""}</td><th>投入日</th><td>${o["created_at"]?new Date(o["created_at"]).toLocaleDateString():"-"}</td></tr>
+      <tr><th>製番号</th><td>${o["製番号"]||""}</td><th>投入日</th><td>${o["created_at"]?fmtD(o["created_at"]):"-"}</td></tr>
       <tr><th>品名</th><td>${o["品名"]||""}</td><th>品番/図番</th><td>${(o["品番"]||"")+" / "+(o["図番"]||"")}</td></tr>
       <tr><th>工程</th><td colspan="3">${o.current_process||""}</td></tr>
       <tr><th>状態</th><td>${o.status||""}</td><th>更新</th><td>${fmtDT(o.updated_at)} / ${o.updated_by||""}</td></tr></table>`;
