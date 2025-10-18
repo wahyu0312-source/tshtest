@@ -34,11 +34,10 @@
     </div>
 
     <div id="weather" class="wx-pill" aria-live="polite" title="現在の天気">
-  <span id="wxCity" class="wx-city">取得中…</span>
-  <span class="wx-dot" aria-hidden="true"></span>
-  <span id="wxIcon" class="wx-ico" aria-hidden="true"></span>
-  <span id="wxTemp" class="wx-temp">--℃</span>
-</div>
+    <span id="wxPlace" class="wx-city">取得中…</span>
+    <span class="wx-dot" aria-hidden="true"></span>
+    <span id="wxTemp" class="wx-temp">--℃</span>
+  </div>
 
 
     <div class="nav-right">
@@ -399,62 +398,7 @@
   <dialog id="dlgTicket"  class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgTicket').close()">閉じる</button></footer></dialog>
   <dialog id="dlgShip"    class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgShip').close()">閉じる</button></footer></dialog>
 
-  <!-- Cuaca (dipertahankan) -->
- <script>
-(function weatherInit(){
-  const elCity = document.getElementById('wxCity');
-  const elTemp = document.getElementById('wxTemp');
-  const elIcon = document.getElementById('wxIcon');
-
-  const svg = parts =>
-    `<svg viewBox="0 0 24 24" class="wx-ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-       <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${parts}</g>
-     </svg>`;
-  const ICONS = {
-    sun:   svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
-    cloud: svg('<path d="M6 16a4 4 0 0 1 1-7.9A5.5 5.5 0 0 1 18 10a4 4 0 0 1 0 8H8a4 4 0 0 1-2-3"/>')
-  };
-
-  async function setWeather(lat, lon){
-    try{
-      // 1) suhu sekarang (Open-Meteo, tanpa API key)
-      const wxResp = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`,
-        { cache:'no-store' }
-      );
-      const wx = await wxResp.json();
-      const temp = wx?.current?.temperature_2m;
-      elTemp.textContent = (temp!=null ? Math.round(temp) : '--') + '℃';
-      elIcon.innerHTML = ICONS.sun;
-
-      // 2) reverse geocoding → nama kota (bahasa Jepang)
-      const revResp = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ja`,
-        { cache:'no-store' }
-      );
-      const rev = await revResp.json();
-      const best = rev?.results?.[0] || {};
-      // urutan fallback: name → admin2 → admin1 → '現在地'
-      elCity.textContent = best.name || best.admin2 || best.admin1 || '現在地';
-    }catch(_e){
-      // fallback Tokyo bila ada error
-      elCity.textContent = '東京';
-      elTemp.textContent = '--℃';
-      elIcon.innerHTML = ICONS.cloud;
-    }
-  }
-
-  // Minta lokasi; jika ditolak → fallback Tokyo
-  if (navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(
-      pos => setWeather(pos.coords.latitude, pos.coords.longitude),
-      _   => setWeather(35.68, 139.76)  // Tokyo
-    , { enableHighAccuracy:false, maximumAge:600000, timeout:6000 });
-  }else{
-    setWeather(35.68, 139.76); // Tokyo
-  }
-})();
-</script>
+ 
 
 </body>
 </html>
