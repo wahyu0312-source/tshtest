@@ -412,12 +412,13 @@ function onGlobalShortcut(e){
     const id=dlg.id;
     if(id==="dlgHistory"){
       const inp=dlg.querySelectorAll('input[type="date"]');
-      inp.forEach(x=> x.value="";
+      inp.forEach(x=> x.value="");  // ← diperbaiki (tadinya kurang ")")
       const q=dlg.querySelector('input[type="text"]'); if(q) q.value="";
       const list=dlg.querySelector("#histBody"); if(list) list.innerHTML="";
     }
   }
 }
+
 
 /* ===== Enter (unhide navbar setelah login) ===== */
 function enter(){
