@@ -13,19 +13,21 @@
   <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script defer src="app.js"></script>
   <style>
-    .wx-pill{ display:inline-flex;align-items:center;gap:.6rem; padding:.5rem .8rem;border-radius:999px; border:1px solid rgba(0,0,0,.08); background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%); color:#0f172a; box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff; min-height:40px; max-width:60vw; }
+    /* WEATHER CHIP (tidak diubah) */
+    .wx-pill{display:inline-flex;align-items:center;gap:.6rem;padding:.5rem .8rem;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);color:#0f172a;box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff;min-height:40px;max-width:60vw}
     .wx-city{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .wx-temp{font-weight:900;letter-spacing:.02em}
-    .wx-ico{width:22px;height:22px;display:inline-block}
-    .wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
-    @media (max-width:760px){ .wx-pill{order:-1} }
-    .okng-inline{display:flex;gap:.35rem;margin-top:.25rem;flex-wrap:wrap}
-    .tag-ok{border-radius:8px;padding:.1rem .4rem;background:#eaffea;border:1px solid #b7efb7}
-    .tag-ng{border-radius:8px;padding:.1rem .4rem;background:#ffecec;border:1px solid #ffb3b3}
+    .wx-temp{font-weight:900;letter-spacing:.02em}.wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
+    @media (max-width:760px){.wx-pill{order:-1}}
 
-    /* FIX: label kecil di atas input tanggal */
-    .labeled { display:flex; flex-direction:column; gap:.25rem; }
-    .labeled > label { font-size:.75rem; color:#64748b; padding-left:.25rem; }
+    /* FIX: label kecil di atas input tanggal (agar user tahu field apa) */
+    .labeled{display:flex;flex-direction:column;gap:.25rem}
+    .labeled>label{font-size:.75rem;color:#64748b;padding-left:.25rem}
+
+    /* FIX: layout charts */
+    #chartsGrid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:1rem}
+    .chart-card{height:300px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    @media (max-width:1100px){#chartsGrid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:720px){#chartsGrid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -36,7 +38,7 @@
       <span class="brand">東京精密発條株式会社システム</span>
     </div>
 
-    <div id="weather" class="wx-pill" aria-live="polite" title="現在の天気">
+    <div id="weather" class="wx-pill" aria-live="polite">
       <span id="wxPlace" class="wx-city">取得中…</span>
       <span class="wx-dot" aria-hidden="true"></span>
       <span id="wxTemp" class="wx-temp">--℃</span>
@@ -53,10 +55,7 @@
       <button id="btnToCharts" class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
 
       <details class="dropdown-inline hidden" id="ddSetting">
-        <summary class="btn ghost">
-          <i class="fa-solid fa-gear"></i> 設定
-          <i class="fa-solid fa-caret-down caret" style="margin-left:.25rem"></i>
-        </summary>
+        <summary class="btn ghost"><i class="fa-solid fa-gear"></i> 設定 <i class="fa-solid fa-caret-down caret" style="margin-left:.25rem"></i></summary>
         <div class="menu right">
           <button id="miStationQR" class="menu-item"><i class="fa-solid fa-qrcode"></i> 工程QR</button>
           <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button>
@@ -69,7 +68,7 @@
     </div>
   </nav>
 
-  <a class="corner-brand" href="#" aria-label="Design credit">Design by Wahyu</a>
+  <a class="corner-brand" href="#">Design by Wahyu</a>
 
   <!-- AUTH -->
   <main id="authView" class="container">
@@ -112,11 +111,7 @@
       </header>
       <div class="table-wrap" style="max-height:55vh">
         <table class="table s">
-          <thead>
-          <tr>
-            <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th>
-          </tr>
-          </thead>
+          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th></tr></thead>
           <tbody id="tbOrders"></tbody>
         </table>
       </div>
@@ -165,26 +160,17 @@
         </div>
       </header>
 
-      <!-- 左右2カラム。dateのplaceholderは表示されないためvisible labelを追加 -->
+      <!-- FIX: tambah label terlihat untuk tanggal (受注日・希望納期) -->
       <div class="grid">
-        <!-- 左カラム -->
+        <!-- 左 -->
         <input id="so_id"  placeholder="受注番号（編集用）">
         <input id="so_cust" placeholder="得意先" list="dl_tokui">
         <input id="so_sei"  placeholder="製番号">
-        <!-- FIX: label for date (受注日) -->
-        <div class="labeled">
-          <label for="so_date">受注日</label>
-          <input id="so_date" type="date">
-        </div>
+        <div class="labeled"><label for="so_date">受注日</label><input id="so_date" type="date"></div>
         <input id="so_drw"  placeholder="図番" list="dl_zuban">
         <input id="so_status" placeholder="状態">
-
-        <!-- 右カラム -->
-        <!-- FIX: label for date (希望納期) -->
-        <div class="labeled">
-          <label for="so_req">希望納期</label>
-          <input id="so_req" type="date">
-        </div>
+        <!-- 右 -->
+        <div class="labeled"><label for="so_req">希望納期</label><input id="so_req" type="date"></div>
         <input id="so_part" placeholder="品番" list="dl_hinban">
         <input id="so_note" placeholder="備考">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
@@ -200,9 +186,7 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead>
-            <tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr>
-          </thead>
+          <thead><tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr></thead>
           <tbody id="tbSales"></tbody>
         </table>
       </div>
@@ -265,25 +249,17 @@
         </div>
       </header>
 
+      <!-- FIX: label terlihat untuk 出荷日・納入日 -->
       <div class="grid">
-        <!-- 左カラム -->
+        <!-- 左 -->
         <input id="s_po" placeholder="注番">
-        <!-- FIX: label for date (出荷日) -->
-        <div class="labeled">
-          <label for="s_date">出荷日</label>
-          <input id="s_date" type="date">
-        </div>
+        <div class="labeled"><label for="s_date">出荷日</label><input id="s_date" type="date"></div>
         <input id="s_cust" placeholder="得意先" list="dl_tokui">
         <input id="s_item" placeholder="品名" list="dl_hinmei">
         <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
         <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
-
-        <!-- 右カラム -->
-        <!-- FIX: label for date (納入日) -->
-        <div class="labeled">
-          <label for="s_delivery">納入日</label>
-          <input id="s_delivery" type="date">
-        </div>
+        <!-- 右 -->
+        <div class="labeled"><label for="s_delivery">納入日</label><input id="s_delivery" type="date"></div>
         <input id="s_qty" type="number" min="0" placeholder="数量">
         <input id="s_part" placeholder="品番" list="dl_hinban">
         <input id="s_drw" placeholder="図番" list="dl_zuban">
@@ -301,7 +277,7 @@
     </section>
   </main>
 
-  <!-- 在庫 -->
+  <!-- INVENTORY -->
   <main id="pageInventory" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -310,16 +286,14 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead>
-            <tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr>
-          </thead>
+          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr></thead>
           <tbody id="tbInv"></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <!-- 完成品一覧 -->
+  <!-- FINISHED -->
   <main id="pageFinished" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -328,16 +302,14 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead>
-            <tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr>
-          </thead>
+          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr></thead>
           <tbody id="tbFin"></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <!-- 請求書 -->
+  <!-- INVOICE -->
   <main id="pageInvoice" class="container hidden">
     <section class="card">
       <header class="row-between"><h3><i class="fa-regular fa-file-lines"></i> 請求書作成</h3></header>
@@ -360,9 +332,7 @@
       <h3>請求明細（編集可：単価）</h3>
       <div class="table-wrap">
         <table class="table s" id="tblInv">
-          <thead>
-            <tr><th>#</th><th>品名</th><th>品番</th><th>図番</th><th>数量</th><th>単価</th><th>金額</th><th>注番</th><th>出荷ID</th></tr>
-          </thead>
+          <thead><tr><th>#</th><th>品名</th><th>品番</th><th>図番</th><th>数量</th><th>単価</th><th>金額</th><th>注番</th><th>出荷ID</th></tr></thead>
           <tbody id="invLines"></tbody>
           <tfoot>
             <tr><td colspan="5"></td><td class="muted">小計</td><td id="invSub">0</td><td colspan="2"></td></tr>
@@ -374,23 +344,30 @@
     </section>
   </main>
 
-  <!-- DIALOGS -->
-  <dialog id="dlgStationQR" class="paper">
-    <div class="body"><h3>工程QR（現場掲示用）</h3><p class="muted s">フォーマット: <code>ST:工程名</code></p><div id="qrWrap" class="grid"></div></div>
-    <footer class="row-end"><button class="btn" onclick="document.getElementById('dlgStationQR').close()">閉じる</button></footer>
-  </dialog>
+  <!-- FIX: PAGE CHARTS DITAMBAHKAN -->
+  <main id="pageCharts" class="container hidden">
+    <section class="card">
+      <header class="row-between">
+        <h3><i class="fa-solid fa-chart-simple"></i> 統計</h3>
+        <div class="row gap">
+          <select id="chartYear" class="input" style="width:140px"></select>
+          <button id="btnChartsRefresh" class="btn ghost"><i class="fa-solid fa-rotate"></i> 更新</button>
+        </div>
+      </header>
+      <div id="chartsGrid">
+        <div class="chart-card"><canvas id="chMonthly"></canvas></div>
+        <div class="chart-card"><canvas id="chCustomer"></canvas></div>
+        <div class="chart-card"><canvas id="chStock"></canvas></div>
+        <div class="chart-card"><canvas id="chWipProc"></canvas></div>
+        <div class="chart-card"><canvas id="chSales"></canvas></div>
+        <div class="chart-card"><canvas id="chPlan"></canvas></div>
+      </div>
+    </section>
+  </main>
 
-  <dialog id="dlgScan" class="paper">
-    <div class="body">
-      <h3>QRスキャン更新（注番: <span id="scanPO"></span>）</h3>
-      <p class="muted s">工程QRを読み取ると切替され履歴に記録されます。</p>
-      <video id="scanVideo" playsinline></video>
-      <canvas id="scanCanvas" class="hidden"></canvas>
-      <div id="scanResult" class="muted s" style="margin-top:.5rem"></div>
-    </div>
-    <footer class="row-end"><button class="btn ghost" id="btnScanStart">開始</button><button class="btn" id="btnScanClose">閉じる</button></footer>
-  </dialog>
-
+  <!-- DIALOGS (tidak berubah) -->
+  <dialog id="dlgStationQR" class="paper"><div class="body"><h3>工程QR（現場掲示用）</h3><p class="muted s">フォーマット: <code>ST:工程名</code></p><div id="qrWrap" class="grid"></div></div><footer class="row-end"><button class="btn" onclick="document.getElementById('dlgStationQR').close()">閉じる</button></footer></dialog>
+  <dialog id="dlgScan" class="paper"><div class="body"><h3>QRスキャン更新（注番: <span id="scanPO"></span>）</h3><p class="muted s">工程QRを読み取ると切替され履歴に記録されます。</p><video id="scanVideo" playsinline></video><canvas id="scanCanvas" class="hidden"></canvas><div id="scanResult" class="muted s" style="margin-top:.5rem"></div></div><footer class="row-end"><button class="btn ghost" id="btnScanStart">開始</button><button class="btn" id="btnScanClose">閉じる</button></footer></dialog>
   <dialog id="dlgHistory" class="paper"><div class="body"><h3>更新履歴</h3><div id="histBody"></div></div><footer class="row-end"><button class="btn" onclick="document.getElementById('dlgHistory').close()">閉じる</button></footer></dialog>
   <dialog id="dlgTicket"  class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgTicket').close()">閉じる</button></footer></dialog>
   <dialog id="dlgShip"    class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgShip').close()">閉じる</button></footer></dialog>
