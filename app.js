@@ -209,6 +209,11 @@ function debounce(fn, ms = 150) {
     t = setTimeout(() => fn.apply(null, args), ms);
   };
 }
+function bindTap(el, handler) {
+  // aman di mobile & desktop
+  el.addEventListener('pointerup', handler, {passive:true});
+  el.addEventListener('click',     handler); // fallback
+}
 
 /* ===== Boot ===== */
 window.addEventListener("DOMContentLoaded", ()=>{
@@ -338,6 +343,12 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // Scanner buttons
   const btnScanStart = $("#btnScanStart"); if (btnScanStart) btnScanStart.onclick = ()=> initScan();
   const btnScanClose = $("#btnScanClose"); if (btnScanClose) btnScanClose.onclick = ()=>{ stopScan(); $("#dlgScan").close(); };
+
+// contoh: untuk tombol OK/NG per proses
+const okBtn = document.getElementById('btnProcOk');
+const ngBtn = document.getElementById('btnProcNg');
+if (okBtn) bindTap(okBtn, () => updateProcessResult('OK'));
+if (ngBtn) bindTap(ngBtn, () => updateProcessResult('NG'));
 
   // 注番 source selector (plan)
   initChubanSelector();
