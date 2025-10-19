@@ -211,6 +211,7 @@ function debounce(fn, ms = 150) {
 }
 function bindTap(el, handler) {
   // aman di mobile & desktop
+  if (!el) return;              // FIX: guard null
   el.addEventListener('pointerup', handler, {passive:true});
   el.addEventListener('click',     handler); // fallback
 }
@@ -239,7 +240,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const miChangePass= $("#miChangePass");
   const btnLogoutMenu = $("#btnLogout");
   if(miStationQR) miStationQR.onclick = openStationQR;
-  if(miAddUser)   miAddUser.onclick   = openAddUserModal;
+  if(miAddUser)   miAddUser.onclick   = openAddUserModal; // FIX: cukup sekali, duplikasi dihapus
   if(miChangePass)miChangePass.onclick= changePasswordUI;
   if(btnLogoutMenu) btnLogoutMenu.onclick= ()=>{ SESSION=null; localStorage.removeItem("erp_session"); location.reload(); };
 
@@ -344,11 +345,11 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const btnScanStart = $("#btnScanStart"); if (btnScanStart) btnScanStart.onclick = ()=> initScan();
   const btnScanClose = $("#btnScanClose"); if (btnScanClose) btnScanClose.onclick = ()=>{ stopScan(); $("#dlgScan").close(); };
 
-// contoh: untuk tombol OK/NG per proses
-const okBtn = document.getElementById('btnProcOk');
-const ngBtn = document.getElementById('btnProcNg');
-if (okBtn) bindTap(okBtn, () => updateProcessResult('OK'));
-if (ngBtn) bindTap(ngBtn, () => updateProcessResult('NG'));
+  // contoh: untuk tombol OK/NG per proses
+  const okBtn = document.getElementById('btnProcOk');
+  const ngBtn = document.getElementById('btnProcNg');
+  if (okBtn) bindTap(okBtn, () => updateProcessResult('OK'));
+  if (ngBtn) bindTap(ngBtn, () => updateProcessResult('NG'));
 
   // 注番 source selector (plan)
   initChubanSelector();
@@ -872,7 +873,47 @@ function openStationQR(){
     });
   },0);
 }
-function openAddUserModal(){ alert("ユーザー追加はログイン画面で対応しています。"); }
+
+/* ---- FIX: ユーザー追加 dari menu 設定 (bukan alert) ---- */
+function openAddUserModal(){
+  // kalau dialog tidak ada (index lama), fallback info
+  const dlg = $("#dlgAddUser");
+  if (!dlg) { alert("ユーザー追加は管理者メニューから利用できます。（dialog が見つかりません）"); return; }
+
+  if (!SESSION) { alert("ログインしてください"); return; }
+  if (!(SESSION.role==="admin" || SESSION.department==="生産技術")) {
+    alert("権限不足（管理者または生産技術のみ）"); return;
+  }
+
+  // reset field
+  ["nuUser","nuPass","nuName"].forEach(id => { const el=$("#"+id); if(el) el.value=""; });
+  dlg.showModal();
+
+  // bind tombol 追加 (hindari double listener)
+  const btn = $("#btnAddUserSave");
+  if (btn) {
+    btn.replaceWith(btn.cloneNode(true));
+    const btn2 = $("#btnAddUserSave");
+    bindTap(btn2, addUserFromSettings);
+  }
+}
+async function addUserFromSettings(){
+  const payload={
+    username:$("#nuUser")?.value.trim()||"",
+    password:$("#nuPass")?.value.trim()||"",
+    full_name:$("#nuName")?.value.trim()||"",
+    department:$("#nuDept")?.value||"",
+    role:$("#nuRole")?.value||"member"
+  };
+  if(!payload.username||!payload.password||!payload.full_name){ alert("必須項目を入力してください"); return; }
+  try{
+    await apiPost("createUser",{user:SESSION,payload});
+    $("#dlgAddUser")?.close();
+    alert("ユーザーを追加しました");
+  }catch(e){ alert(e.message||e); }
+}
+/* ----------------------------------------------- */
+
 function startScanFor(po){
   CURRENT_PO=po;
   const dlg=$("#dlgScan"); if(!dlg) return;
