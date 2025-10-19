@@ -13,17 +13,17 @@
   <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script defer src="app.js"></script>
   <style>
-    /* WEATHER CHIP (tidak diubah) */
-    .wx-pill{display:inline-flex;align-items:center;gap:.6rem;padding:.5rem .8rem;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);color:#0f172a;box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff;min-height:40px;max-width:60vw}
+    .wx-pill{ display:inline-flex;align-items:center;gap:.6rem; padding:.5rem .8rem;border-radius:999px; border:1px solid rgba(0,0,0,.08); background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%); color:#0f172a; box-shadow:0 6px 18px rgba(2,6,23,.08), inset 0 1px 0 #fff; min-height:40px; max-width:60vw; }
     .wx-city{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .wx-temp{font-weight:900;letter-spacing:.02em}.wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
-    @media (max-width:760px){.wx-pill{order:-1}}
+    .wx-temp{font-weight:900;letter-spacing:.02em}
+    .wx-dot{width:6px;height:6px;border-radius:50%;background:#93c5fd;opacity:.9}
+    @media (max-width:760px){ .wx-pill{order:-1} }
 
-    /* FIX: label kecil di atas input tanggal (agar user tahu field apa) */
+    /* FIX: label kecil untuk input tanggal */
     .labeled{display:flex;flex-direction:column;gap:.25rem}
     .labeled>label{font-size:.75rem;color:#64748b;padding-left:.25rem}
 
-    /* FIX: layout charts */
+    /* Charts grid */
     #chartsGrid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:1rem}
     .chart-card{height:300px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff}
     @media (max-width:1100px){#chartsGrid{grid-template-columns:repeat(2,1fr)}}
@@ -38,7 +38,7 @@
       <span class="brand">東京精密発條株式会社システム</span>
     </div>
 
-    <div id="weather" class="wx-pill" aria-live="polite">
+    <div id="weather" class="wx-pill" aria-live="polite" title="現在の天気">
       <span id="wxPlace" class="wx-city">取得中…</span>
       <span class="wx-dot" aria-hidden="true"></span>
       <span id="wxTemp" class="wx-temp">--℃</span>
@@ -55,10 +55,13 @@
       <button id="btnToCharts" class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
 
       <details class="dropdown-inline hidden" id="ddSetting">
-        <summary class="btn ghost"><i class="fa-solid fa-gear"></i> 設定 <i class="fa-solid fa-caret-down caret" style="margin-left:.25rem"></i></summary>
+        <summary class="btn ghost">
+          <i class="fa-solid fa-gear"></i> 設定
+          <i class="fa-solid fa-caret-down caret" style="margin-left:.25rem"></i>
+        </summary>
         <div class="menu right">
           <button id="miStationQR" class="menu-item"><i class="fa-solid fa-qrcode"></i> 工程QR</button>
-          <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button>
+          <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button><!-- FIX: admin-only via JS -->
           <button id="miChangePass" class="menu-item"><i class="fa-solid fa-key"></i> パス変更</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:.35rem 0">
           <button id="btnLogout" class="menu-item"><i class="fa-solid fa-right-from-bracket"></i> ログアウト</button>
@@ -68,7 +71,7 @@
     </div>
   </nav>
 
-  <a class="corner-brand" href="#">Design by Wahyu</a>
+  <a class="corner-brand" href="#" aria-label="Design credit">Design by Wahyu</a>
 
   <!-- AUTH -->
   <main id="authView" class="container">
@@ -79,20 +82,8 @@
         <input id="inPass" type="password" placeholder="パスワード">
       </div>
 
-      <details class="card" style="margin-top:.8rem">
-        <summary><strong><i class="fa-solid fa-user-gear"></i> 管理者: ユーザー追加</strong></summary>
-        <div class="grid" style="margin-top:.6rem">
-          <input id="nuUser" placeholder="ユーザー名">
-          <input id="nuPass" type="password" placeholder="パスワード">
-          <input id="nuName" placeholder="氏名">
-          <select id="nuDept">
-            <option value="営業">営業</option><option value="生産技術">生産技術</option><option value="生産管理部">生産管理部</option><option value="製造部">製造部</option><option value="検査部">検査部</option>
-          </select>
-          <select id="nuRole"><option value="member">member</option><option value="manager">manager</option><option value="admin">admin</option></select>
-        </div>
-        <button id="btnNewUser" class="btn ghost full">ユーザー追加</button>
-        <p class="muted s">初回: <code>admin / admin123</code>（Users空なら自動作成。部門=生産技術）</p>
-      </details>
+      <!-- FIX: Hapus 'ユーザー追加' dari halaman login -->
+      <!-- (dipindah ke dialog khusus admin di bagian bawah) -->
 
       <button id="btnLogin" class="btn primary full" style="margin-top:.8rem">ログイン</button>
     </section>
@@ -111,7 +102,11 @@
       </header>
       <div class="table-wrap" style="max-height:55vh">
         <table class="table s">
-          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th></tr></thead>
+          <thead>
+          <tr>
+            <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th>
+          </tr>
+          </thead>
           <tbody id="tbOrders"></tbody>
         </table>
       </div>
@@ -160,7 +155,6 @@
         </div>
       </header>
 
-      <!-- FIX: tambah label terlihat untuk tanggal (受注日・希望納期) -->
       <div class="grid">
         <!-- 左 -->
         <input id="so_id"  placeholder="受注番号（編集用）">
@@ -174,9 +168,7 @@
         <input id="so_part" placeholder="品番" list="dl_hinban">
         <input id="so_note" placeholder="備考">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
-       <!-- FIX: numeric keyboard on mobile -->
-<input id="so_qty" type="number" inputmode="numeric" pattern="\d*" placeholder="数量">
-
+        <input id="so_qty" type="number" inputmode="numeric" pattern="\d*" placeholder="数量"><!-- FIX: keyboard numerik -->
         <input id="so_linked_po" placeholder="関連注番（PO）">
       </div>
     </section>
@@ -188,7 +180,9 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead><tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr></thead>
+          <thead>
+            <tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr>
+          </thead>
           <tbody id="tbSales"></tbody>
         </table>
       </div>
@@ -251,7 +245,6 @@
         </div>
       </header>
 
-      <!-- FIX: label terlihat untuk 出荷日・納入日 -->
       <div class="grid">
         <!-- 左 -->
         <input id="s_po" placeholder="注番">
@@ -262,9 +255,7 @@
         <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
         <!-- 右 -->
         <div class="labeled"><label for="s_delivery">納入日</label><input id="s_delivery" type="date"></div>
-        <!-- FIX: numeric keyboard on mobile -->
-<input id="s_qty" type="number" min="0" inputmode="numeric" pattern="\d*" placeholder="数量">
-
+        <input id="s_qty" type="number" min="0" inputmode="numeric" pattern="\d*" placeholder="数量"><!-- FIX -->
         <input id="s_part" placeholder="品番" list="dl_hinban">
         <input id="s_drw" placeholder="図番" list="dl_zuban">
         <input id="s_carrier" placeholder="運送会社" list="dl_unso">
@@ -348,7 +339,7 @@
     </section>
   </main>
 
-  <!-- FIX: PAGE CHARTS DITAMBAHKAN -->
+  <!-- CHARTS -->
   <main id="pageCharts" class="container hidden">
     <section class="card">
       <header class="row-between">
@@ -369,9 +360,51 @@
     </section>
   </main>
 
-  <!-- DIALOGS (tidak berubah) -->
-  <dialog id="dlgStationQR" class="paper"><div class="body"><h3>工程QR（現場掲示用）</h3><p class="muted s">フォーマット: <code>ST:工程名</code></p><div id="qrWrap" class="grid"></div></div><footer class="row-end"><button class="btn" onclick="document.getElementById('dlgStationQR').close()">閉じる</button></footer></dialog>
-  <dialog id="dlgScan" class="paper"><div class="body"><h3>QRスキャン更新（注番: <span id="scanPO"></span>）</h3><p class="muted s">工程QRを読み取ると切替され履歴に記録されます。</p><video id="scanVideo" playsinline></video><canvas id="scanCanvas" class="hidden"></canvas><div id="scanResult" class="muted s" style="margin-top:.5rem"></div></div><footer class="row-end"><button class="btn ghost" id="btnScanStart">開始</button><button class="btn" id="btnScanClose">閉じる</button></footer></dialog>
+  <!-- DIALOGS -->
+  <dialog id="dlgStationQR" class="paper">
+    <div class="body"><h3>工程QR（現場掲示用）</h3><p class="muted s">フォーマット: <code>ST:工程名</code></p><div id="qrWrap" class="grid"></div></div>
+    <footer class="row-end"><button class="btn" onclick="document.getElementById('dlgStationQR').close()">閉じる</button></footer>
+  </dialog>
+
+  <dialog id="dlgScan" class="paper">
+    <div class="body">
+      <h3>QRスキャン更新（注番: <span id="scanPO"></span>）</h3>
+      <p class="muted s">工程QRを読み取ると切替され履歴に記録されます。</p>
+      <video id="scanVideo" playsinline></video>
+      <canvas id="scanCanvas" class="hidden"></canvas>
+      <div id="scanResult" class="muted s" style="margin-top:.5rem"></div>
+    </div>
+    <footer class="row-end"><button class="btn ghost" id="btnScanStart">開始</button><button class="btn" id="btnScanClose">閉じる</button></footer>
+  </dialog>
+
+  <!-- FIX: Dialog khusus admin untuk ユーザー追加 -->
+  <dialog id="dlgAddUser" class="paper">
+    <div class="body">
+      <h3><i class="fa-solid fa-user-plus"></i> ユーザー追加（管理者）</h3>
+      <div class="grid" style="margin-top:.6rem">
+        <input id="nuUser" placeholder="ユーザー名">
+        <input id="nuPass" type="password" placeholder="パスワード">
+        <input id="nuName" placeholder="氏名">
+        <select id="nuDept">
+          <option value="営業">営業</option>
+          <option value="生産技術">生産技術</option>
+          <option value="生産管理部">生産管理部</option>
+          <option value="製造部">製造部</option>
+          <option value="検査部">検査部</option>
+        </select>
+        <select id="nuRole">
+          <option value="member">member</option>
+          <option value="manager">manager</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+    </div>
+    <footer class="row-end">
+      <button class="btn ghost" id="btnAddUserSave"><i class="fa-solid fa-floppy-disk"></i> 追加</button>
+      <button class="btn" onclick="document.getElementById('dlgAddUser').close()">閉じる</button>
+    </footer>
+  </dialog>
+
   <dialog id="dlgHistory" class="paper"><div class="body"><h3>更新履歴</h3><div id="histBody"></div></div><footer class="row-end"><button class="btn" onclick="document.getElementById('dlgHistory').close()">閉じる</button></footer></dialog>
   <dialog id="dlgTicket"  class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgTicket').close()">閉じる</button></footer></dialog>
   <dialog id="dlgShip"    class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgShip').close()">閉じる</button></footer></dialog>
