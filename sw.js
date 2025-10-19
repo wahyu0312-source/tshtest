@@ -26,6 +26,7 @@ const CORE_ASSETS = [
 self.addEventListener('install', (e)=>{
   self.skipWaiting();
   e.waitUntil(
+    // addAll ke origin selain same-origin kadang gagal (opaque) → diamkan
     caches.open(ASSET_CACHE).then(cache=> cache.addAll(CORE_ASSETS).catch(()=>{}))
   );
 });
@@ -45,7 +46,7 @@ self.addEventListener('fetch', (e)=>{
   // Only GET requests are cachable
   if(req.method !== 'GET') return;
 
-  // API GET — network-first with cache fallback (offline-friendly)
+  // API GET — network-first dengan cache fallback (offline-friendly)
   if (url.href.startsWith(API_BASE)) {
     e.respondWith((async ()=>{
       try{
@@ -67,10 +68,16 @@ self.addEventListener('fetch', (e)=>{
   e.respondWith((async ()=>{
     const cache = await caches.open(ASSET_CACHE);
     const cached = await cache.match(req);
+    // FIX: Pastikan selalu mengembalikan Response valid meskipun fetch gagal
     const fetchPromise = fetch(req).then(net=>{
       cache.put(req, net.clone());
       return net;
-    }).catch(()=> cached);
+    }).catch(()=>{
+      // Jika fetch gagal dan tidak ada cache, kembalikan Response 504,
+      // jangan mengembalikan undefined (yang memicu TypeError di respondWith).
+      if (cached) return cached;
+      return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+    });
     return cached || fetchPromise;
   })());
 });
