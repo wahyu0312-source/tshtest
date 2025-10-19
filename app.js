@@ -190,7 +190,7 @@ async function initWeather(){
     // reverse geocoding (opsional; boleh gagal)
     try {
       const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`)
-        .then(r=>{ if (r.type === "opaque") { throw new Error("CORS opaque"); } return r.json(); });
+        .then(r => r.json());
       city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
       setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
     } catch (_){ /* ignore */ }
