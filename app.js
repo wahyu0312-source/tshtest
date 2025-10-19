@@ -174,13 +174,33 @@ async function initWeather(){
     const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
     const { latitude, longitude } = pos.coords;
 
-    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`).then(r=>r.json());
-    const temp = wx && wx.current ? wx.current.temperature_2m : null;
+    // FIX: pisahkan fetch suhu & reverse-geocoding.
+    // Jika reverse-geocoding diblokir CORS, suhu tetap muncul dan UI tidak jatuh ke catch global.
+    let city = "現在地";
 
-    const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`).then(r=>r.json());
-    const city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
+    // ---- suhu
+    try {
+      const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`)
+        .then(r=>r.json());
+      const temp = wx && wx.current ? wx.current.temperature_2m : null;
+      setUI(city, temp);
+    } catch (e) {
+      // jika suhu pun gagal, tampilkan default
+      setUI(city, null);
+    }
 
-    setUI(city, temp);
+    // ---- reverse geocoding (optional; bisa gagal CORS)
+    try {
+      const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`)
+        .then(r=>{
+          // FIX: beberapa CDN/endpoint mengembalikan response opaque → .json() akan gagal.
+          if (r.type === "opaque") { throw new Error("CORS opaque"); }
+          return r.json();
+        });
+      city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
+      setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
+    } catch (_){ /* biarkan city default */ }
+
   }catch(e){
     console.warn("weather:", e);
     setUI("現在地", null);
@@ -576,14 +596,15 @@ async function saveSalesUI(){
   // Ambil nilai dari form (jika ada). Jika elemen tidak ada, akan diabaikan.
   const so_id   = $("#so_id")?.value.trim() || "";          // 受注番号（opsional: kosong = create）
   const recv    = $("#so_date")?.value || "";               // 受注日
-  const cust    = $("#so_tokui")?.value.trim() || "";       // 得意先
+  // FIX: id input di HTML adalah #so_cust, #so_req, dll → sediakan fallback agar kompatibel.
+  const cust    = $("#so_tokui")?.value?.trim?.() || $("#so_cust")?.value?.trim?.() || ""; // 得意先
   const item    = $("#so_item")?.value.trim() || "";        // 品名
   const part    = $("#so_part")?.value.trim() || "";        // 品番
   const drw     = $("#so_drw")?.value.trim()  || "";        // 図番
   const qty     = Number($("#so_qty")?.value || 0) || 0;    // 数量
-  const due     = $("#so_due")?.value || "";                // 希望納期
-  const status  = $("#so_status")?.value || "";             // ステータス
-  const linked  = $("#so_linked_po")?.value.trim() || "";   // ひも付PO
+  const due     = $("#so_due")?.value || $("#so_req")?.value || ""; // 希望納期
+  const status  = $("#so_status")?.value || "";             // ステータス（opsional）
+  const linked  = $("#so_linked_po")?.value?.trim?.() || "";   // ひも付PO（opsional）
 
   const payload = {
     "受注日": recv, "得意先": cust, "品名": item, "品番": part, "図番": drw,
