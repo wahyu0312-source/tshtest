@@ -231,3 +231,42 @@ video#scanVideo{width:100%;max-height:48vh;border-radius:12px;background:#000}
   nav,.btn,.input,.row-between > .row,.corner-brand{display:none !important}
   body{background:#fff}
 }
+/* === Responsiveness tweaks (tambahan) === */
+
+/* Tombol/topbar rapi dan bisa melipat di HP */
+.nav-right { flex-wrap: wrap; gap: .4rem; }
+@media (max-width: 1024px) {
+  #weather { order: -1; margin: .5rem 0 0; } /* chip cuaca pindah ke kiri atas di tablet/HP */
+}
+
+/* Grid form: 1 kolom di HP, 2 kolom di layar medium, 3 di sangat lebar jika diperlukan */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr !important; }
+}
+@media (min-width: 1500px) {
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Area tabel: selalu bisa geser horizontal di layar kecil */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* smooth di iOS */
+}
+.table { min-width: 900px; } /* cegah mepet di HP */
+
+/* Target sentuhan nyaman */
+input, select, textarea, button { min-height: 42px; }
+button.btn { min-height: 44px; } /* sesuai pedoman 44px */
+
+/* Chart: pastikan kanvas mengisi card */
+.chart-card canvas { width: 100% !important; height: 100% !important; }
+
+/* Aman untuk iPhone notch jika muncul elemen fixed (seperti error bar) */
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Kartu dialog: penuhi layar HP dengan margin aman */
+@media (max-width: 520px) {
+  dialog.paper { width: calc(100vw - 24px); max-width: none; }
+}
