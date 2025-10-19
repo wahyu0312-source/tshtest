@@ -39,7 +39,6 @@
     </div>
 
     <div class="nav-right">
-      <!-- tombol navbar di-unhide sesudah login -->
       <button id="btnToDash" class="btn ghost hidden"><i class="fa-solid fa-gauge"></i> ダッシュボード</button>
       <button id="btnToSales" class="btn ghost hidden"><i class="fa-regular fa-handshake"></i> 受注（営業）</button>
       <button id="btnToPlan" class="btn ghost hidden"><i class="fa-solid fa-list-check"></i> 生産計画</button>
@@ -162,21 +161,23 @@
         </div>
       </header>
 
-      <!-- FIX: tambah kolom Status & 関連注番(PO) => form seragam dengan format import -->
+      <!-- FIX: SERAGAM DENGAN FORMAT IMPORT (受注日/希望納期 di BARIS ATAS) -->
       <div class="grid">
-        <input id="so_id" placeholder="受注番号（編集用）">
-        <input id="so_date" type="date" placeholder="受注日">
+        <!-- 左カラム -->
+        <input id="so_id"  placeholder="受注番号（編集用）">
+        <input id="so_date" type="date" placeholder="受注日"><!-- FIX: 明示 -->
         <input id="so_cust" placeholder="得意先" list="dl_tokui">
-        <input id="so_item" placeholder="品名" list="dl_hinmei">
         <input id="so_part" placeholder="品番" list="dl_hinban">
-        <input id="so_drw" placeholder="図番" list="dl_zuban">
-        <input id="so_sei" placeholder="製番号">
-        <input id="so_qty" type="number" placeholder="数量">
-        <input id="so_req" type="date" placeholder="希望納期">
+        <input id="so_sei"  placeholder="製番号">
         <input id="so_note" placeholder="備考">
-        <!-- Tambahan -->
-        <input id="so_status" placeholder="状態"><!-- FIX -->
-        <input id="so_linked_po" placeholder="関連注番（PO）"><!-- FIX -->
+
+        <!-- 右カラム -->
+        <input id="so_req"  type="date" placeholder="希望納期"><!-- FIX: 明示 -->
+        <input id="so_item" placeholder="品名" list="dl_hinmei">
+        <input id="so_drw"  placeholder="図番" list="dl_zuban">
+        <input id="so_qty"  type="number" placeholder="数量">
+        <input id="so_status" placeholder="状態"><!-- FIX: 追加 -->
+        <input id="so_linked_po" placeholder="関連注番（PO）"><!-- FIX: 追加 -->
       </div>
     </section>
 
@@ -211,7 +212,6 @@
         </div>
       </header>
 
-      <!-- 注番 input: 受注選択 / 手入力 / 空欄 -->
       <div class="grid">
         <div style="display:flex;gap:.5rem;align-items:center">
           <select id="poSource" class="input" style="width:180px">
@@ -253,20 +253,23 @@
         </div>
       </header>
 
+      <!-- FIX: baris atas JELAS → 出荷日 / 納入日 -->
       <div class="grid">
+        <!-- 左カラム -->
         <input id="s_po" placeholder="注番">
-        <input id="s_date" type="date" placeholder="出荷日">
-        <input id="s_delivery" type="date" placeholder="納入日">
-        <input id="s_qty" type="number" min="0" placeholder="数量">
-
+        <input id="s_date" type="date" placeholder="出荷日"><!-- FIX: 明示 -->
         <input id="s_cust" placeholder="得意先" list="dl_tokui">
         <input id="s_item" placeholder="品名" list="dl_hinmei">
+        <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
+        <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
+
+        <!-- 右カラム -->
+        <input id="s_delivery" type="date" placeholder="納入日"><!-- FIX: 明示 -->
+        <input id="s_qty" type="number" min="0" placeholder="数量">
         <input id="s_part" placeholder="品番" list="dl_hinban">
         <input id="s_drw" placeholder="図番" list="dl_zuban">
-
-        <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
         <input id="s_carrier" placeholder="運送会社" list="dl_unso">
-        <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
+        <div></div>
       </div>
 
       <datalist id="dl_okurisaki"></datalist>
