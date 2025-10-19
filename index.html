@@ -22,6 +22,10 @@
     .okng-inline{display:flex;gap:.35rem;margin-top:.25rem;flex-wrap:wrap}
     .tag-ok{border-radius:8px;padding:.1rem .4rem;background:#eaffea;border:1px solid #b7efb7}
     .tag-ng{border-radius:8px;padding:.1rem .4rem;background:#ffecec;border:1px solid #ffb3b3}
+
+    /* FIX: label kecil di atas input tanggal */
+    .labeled { display:flex; flex-direction:column; gap:.25rem; }
+    .labeled > label { font-size:.75rem; color:#64748b; padding-left:.25rem; }
   </style>
 </head>
 <body>
@@ -161,23 +165,31 @@
         </div>
       </header>
 
-      <!-- FIX: SERAGAM DENGAN FORMAT IMPORT (受注日/希望納期 di BARIS ATAS) -->
+      <!-- 左右2カラム。dateのplaceholderは表示されないためvisible labelを追加 -->
       <div class="grid">
         <!-- 左カラム -->
         <input id="so_id"  placeholder="受注番号（編集用）">
-        <input id="so_date" type="date" placeholder="受注日"><!-- FIX: 明示 -->
         <input id="so_cust" placeholder="得意先" list="dl_tokui">
-        <input id="so_part" placeholder="品番" list="dl_hinban">
         <input id="so_sei"  placeholder="製番号">
-        <input id="so_note" placeholder="備考">
+        <!-- FIX: label for date (受注日) -->
+        <div class="labeled">
+          <label for="so_date">受注日</label>
+          <input id="so_date" type="date">
+        </div>
+        <input id="so_drw"  placeholder="図番" list="dl_zuban">
+        <input id="so_status" placeholder="状態">
 
         <!-- 右カラム -->
-        <input id="so_req"  type="date" placeholder="希望納期"><!-- FIX: 明示 -->
+        <!-- FIX: label for date (希望納期) -->
+        <div class="labeled">
+          <label for="so_req">希望納期</label>
+          <input id="so_req" type="date">
+        </div>
+        <input id="so_part" placeholder="品番" list="dl_hinban">
+        <input id="so_note" placeholder="備考">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
-        <input id="so_drw"  placeholder="図番" list="dl_zuban">
         <input id="so_qty"  type="number" placeholder="数量">
-        <input id="so_status" placeholder="状態"><!-- FIX: 追加 -->
-        <input id="so_linked_po" placeholder="関連注番（PO）"><!-- FIX: 追加 -->
+        <input id="so_linked_po" placeholder="関連注番（PO）">
       </div>
     </section>
 
@@ -253,18 +265,25 @@
         </div>
       </header>
 
-      <!-- FIX: baris atas JELAS → 出荷日 / 納入日 -->
       <div class="grid">
         <!-- 左カラム -->
         <input id="s_po" placeholder="注番">
-        <input id="s_date" type="date" placeholder="出荷日"><!-- FIX: 明示 -->
+        <!-- FIX: label for date (出荷日) -->
+        <div class="labeled">
+          <label for="s_date">出荷日</label>
+          <input id="s_date" type="date">
+        </div>
         <input id="s_cust" placeholder="得意先" list="dl_tokui">
         <input id="s_item" placeholder="品名" list="dl_hinmei">
         <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
         <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
 
         <!-- 右カラム -->
-        <input id="s_delivery" type="date" placeholder="納入日"><!-- FIX: 明示 -->
+        <!-- FIX: label for date (納入日) -->
+        <div class="labeled">
+          <label for="s_delivery">納入日</label>
+          <input id="s_delivery" type="date">
+        </div>
         <input id="s_qty" type="number" min="0" placeholder="数量">
         <input id="s_part" placeholder="品番" list="dl_hinban">
         <input id="s_drw" placeholder="図番" list="dl_zuban">
