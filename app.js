@@ -58,7 +58,7 @@ const PROC_CLASS = {
   "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out","検査工程":"prc-inspect"
 };
 
-/* ===== SWR Cache (localStorage) ===== */
+/* ===== SWR Cache ===== */
 const SWR = {
   get(key){ try{ const x=localStorage.getItem(key); return x? JSON.parse(x):null;}catch(e){return null;} },
   set(key,val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} },
@@ -174,32 +174,26 @@ async function initWeather(){
     const pos = await new Promise((res,rej)=> navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:8000}));
     const { latitude, longitude } = pos.coords;
 
-    // FIX: pisahkan fetch suhu & reverse-geocoding.
-    // Jika reverse-geocoding diblokir CORS, suhu tetap muncul dan UI tidak jatuh ke catch global.
+    // FIX: pisahkan suhu vs reverse-geocoding, biar UI tetap aman saat CORS error
     let city = "現在地";
 
-    // ---- suhu
+    // suhu
     try {
       const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`)
         .then(r=>r.json());
       const temp = wx && wx.current ? wx.current.temperature_2m : null;
       setUI(city, temp);
     } catch (e) {
-      // jika suhu pun gagal, tampilkan default
       setUI(city, null);
     }
 
-    // ---- reverse geocoding (optional; bisa gagal CORS)
+    // reverse geocoding (opsional)
     try {
       const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`)
-        .then(r=>{
-          // FIX: beberapa CDN/endpoint mengembalikan response opaque → .json() akan gagal.
-          if (r.type === "opaque") { throw new Error("CORS opaque"); }
-          return r.json();
-        });
+        .then(r=>{ if (r.type === "opaque") { throw new Error("CORS opaque"); } return r.json(); });
       city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
       setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
-    } catch (_){ /* biarkan city default */ }
+    } catch (_){ /* biarkan default */ }
 
   }catch(e){
     console.warn("weather:", e);
@@ -218,8 +212,7 @@ function debounce(fn, ms = 150) {
 
 /* ===== Boot ===== */
 window.addEventListener("DOMContentLoaded", ()=>{
-
-  // routing tombol — tidak meng-unhide; unhide dilakukan saat login di enter()
+  // routing tombol
   const map = {
     btnToDash:    ()=> show("pageDash"),
     btnToSales:   ()=> show("pageSales"),
@@ -298,7 +291,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const btnShipDelete  = $("#btnShipDelete");
   const btnShipByPO    = $("#btnShipByPO");
   const btnShipByID    = $("#btnShipByID");
-  const btnShipImport  = $("#btnShipImport");
+  const btnShipImport  = $("#btnShipImport"];
   const fileShip       = $("#fileShip");
   if(btnSchedule)   btnSchedule.onclick   = scheduleUI;
   if(btnShipExport) btnShipExport.onclick = exportShipCSV;
@@ -390,7 +383,7 @@ function onGlobalShortcut(e){
   }
 }
 
-/* ===== Enter (unhide navbar setelah login) ===== */
+/* ===== Enter ===== */
 function enter(){
   const ui=$("#userInfo");
   if (ui && SESSION) {
@@ -585,38 +578,39 @@ async function renderSales(){
       <td class="s muted">${fmtD(r["希望納期"])}</td>
       <td><span class="badge">${r.status||""}</span></td>
       <td>${r["linked_po_id"]||""}</td>
-      <td class="s muted">${fmtDT(r["updated_at"])}</td>
+      <td class="s muted">${fmtDT(r["更新日時"]||r["updated_at"])}</td>
     </tr>`).join("");
 }
+
 /* ==== Sales CRUD / Actions ==== */
 async function saveSalesUI(){
   if(!(SESSION && (SESSION.role==="admin" || ["生産技術","生産管理部","営業"].includes(SESSION.department||"")))){
     alert("権限不足"); return;
   }
-  // Ambil nilai dari form (jika ada). Jika elemen tidak ada, akan diabaikan.
-  const so_id   = $("#so_id")?.value.trim() || "";          // 受注番号（opsional: kosong = create）
-  const recv    = $("#so_date")?.value || "";               // 受注日
-  // FIX: id input di HTML adalah #so_cust, #so_req, dll → sediakan fallback agar kompatibel.
-  const cust    = $("#so_tokui")?.value?.trim?.() || $("#so_cust")?.value?.trim?.() || ""; // 得意先
-  const item    = $("#so_item")?.value.trim() || "";        // 品名
-  const part    = $("#so_part")?.value.trim() || "";        // 品番
-  const drw     = $("#so_drw")?.value.trim()  || "";        // 図番
-  const qty     = Number($("#so_qty")?.value || 0) || 0;    // 数量
-  const due     = $("#so_due")?.value || $("#so_req")?.value || ""; // 希望納期
-  const status  = $("#so_status")?.value || "";             // ステータス（opsional）
-  const linked  = $("#so_linked_po")?.value?.trim?.() || "";   // ひも付PO（opsional）
+  const so_id   = $("#so_id")?.value.trim() || "";
+  const recv    = $("#so_date")?.value || "";
+  const cust    = $("#so_tokui")?.value?.trim?.() || $("#so_cust")?.value?.trim?.() || "";
+  const item    = $("#so_item")?.value.trim() || "";
+  const part    = $("#so_part")?.value.trim() || "";
+  const drw     = $("#so_drw")?.value.trim()  || "";
+  const sei     = $("#so_sei")?.value.trim()  || "";
+  const qty     = Number($("#so_qty")?.value || 0) || 0;
+  const due     = $("#so_due")?.value || $("#so_req")?.value || "";
+  const note    = $("#so_note")?.value || "";
+  const status  = $("#so_status")?.value || "";            // FIX
+  const linked  = $("#so_linked_po")?.value?.trim?.() || "";// FIX
 
   const payload = {
     "受注日": recv, "得意先": cust, "品名": item, "品番": part, "図番": drw,
-    "数量": qty, "希望納期": due, status, "linked_po_id": linked
+    "製番号": sei, "数量": qty, "希望納期": due, "備考": note, status, "linked_po_id": linked
   };
 
   try{
     if(so_id){
-      await apiPost("updateSales", { so_id, updates: payload, user: SESSION });
+      await apiPost("updateSalesOrder", { so_id, updates: payload, user: SESSION }); // FIX
       alert("営業データを更新しました");
     }else{
-      const r = await apiPost("createSales", { payload, user: SESSION });
+      const r = await apiPost("createSalesOrder", { payload, user: SESSION });       // FIX
       alert("営業データを作成: " + (r.so_id || ""));
       if($("#so_id")) $("#so_id").value = r.so_id || "";
     }
@@ -633,7 +627,7 @@ async function deleteSalesUI(){
   if(!so_id) return;
   if(!confirm("削除しますか？")) return;
   try{
-    const r = await apiPost("deleteSales", { so_id, user: SESSION });
+    const r = await apiPost("deleteSalesOrder", { so_id, user: SESSION });           // FIX
     alert("削除: " + (r.deleted || so_id));
     if($("#so_id")) $("#so_id").value = "";
     await renderSales();
@@ -648,8 +642,7 @@ async function promoteSalesUI(){
   const so_id = $("#so_id")?.value.trim() || prompt("受注番号（SO）:");
   if(!so_id) return;
   try{
-    // Server side membuat/menautkan 注番 (PO) dari SO.
-    const r = await apiPost("promoteSales", { so_id, user: SESSION });
+    const r = await apiPost("promoteSalesToPlan", { so_id, user: SESSION });         // FIX
     alert(`注番へ昇格しました: SO=${so_id} → PO=${r.po_id||"(不明)"}`);
     await refreshAll(true);
     await populateChubanFromSales();
@@ -746,8 +739,8 @@ async function scheduleUI(){
   if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部"))) return alert("権限不足");
 
   const po   = $("#s_po")?.value.trim() || "";
-  const sdate= $("#s_date")?.value || "";     // 出荷日
-  const ddate= $("#s_delivery")?.value || ""; // 納入日
+  const sdate= $("#s_date")?.value || "";
+  const ddate= $("#s_delivery")?.value || "";
   const qty  = Number($("#s_qty")?.value || 0) || 0;
 
   const cust = $("#s_cust")?.value.trim() || "";
@@ -848,7 +841,7 @@ async function openHistory(po_id){
   try{
     const data=await apiGet({action:"history",po_id});
     const rows=(data||[]).map(x=>`
-      <div class="row s" style="gap:.5rem;border-bottom:1px solid var(--border);padding:.25rem 0">
+      <div class="row s" style="gap=.5rem;border-bottom:1px solid var(--border);padding:.25rem 0">
         <span class="muted">${fmtDT(x.timestamp)}</span>
         <span>${x.updated_by||""}</span>
         <span class="badge ${STATUS_CLASS[x.new_status]||"st-begin"}">${x.prev_status||""} → ${x.new_status||""}</span>
