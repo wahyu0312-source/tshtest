@@ -270,3 +270,14 @@ body {
 @media (max-width: 520px) {
   dialog.paper { width: calc(100vw - 24px); max-width: none; }
 }
+/* Tap target nyaman di layar sentuh */
+.okng-inline { display:flex; gap:.5rem; flex-wrap:wrap; }
+.okng-inline .btn-ok,
+.okng-inline .btn-ng {
+  min-height: 44px;            /* rekomendasi Apple/Google */
+  padding: .4rem .7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.okng-inline .btn-ok { background:#eaffea; border-color:#b7efb7; }
+.okng-inline .btn-ng { background:#ffecec; border-color:#ffb3b3; }
