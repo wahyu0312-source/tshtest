@@ -568,6 +568,80 @@ async function renderSales(){
       <td class="s muted">${fmtDT(r["updated_at"])}</td>
     </tr>`).join("");
 }
+/* ==== Sales CRUD / Actions ==== */
+async function saveSalesUI(){
+  if(!(SESSION && (SESSION.role==="admin" || ["生産技術","生産管理部","営業"].includes(SESSION.department||"")))){
+    alert("権限不足"); return;
+  }
+  // Ambil nilai dari form (jika ada). Jika elemen tidak ada, akan diabaikan.
+  const so_id   = $("#so_id")?.value.trim() || "";          // 受注番号（opsional: kosong = create）
+  const recv    = $("#so_date")?.value || "";               // 受注日
+  const cust    = $("#so_tokui")?.value.trim() || "";       // 得意先
+  const item    = $("#so_item")?.value.trim() || "";        // 品名
+  const part    = $("#so_part")?.value.trim() || "";        // 品番
+  const drw     = $("#so_drw")?.value.trim()  || "";        // 図番
+  const qty     = Number($("#so_qty")?.value || 0) || 0;    // 数量
+  const due     = $("#so_due")?.value || "";                // 希望納期
+  const status  = $("#so_status")?.value || "";             // ステータス
+  const linked  = $("#so_linked_po")?.value.trim() || "";   // ひも付PO
+
+  const payload = {
+    "受注日": recv, "得意先": cust, "品名": item, "品番": part, "図番": drw,
+    "数量": qty, "希望納期": due, status, "linked_po_id": linked
+  };
+
+  try{
+    if(so_id){
+      await apiPost("updateSales", { so_id, updates: payload, user: SESSION });
+      alert("営業データを更新しました");
+    }else{
+      const r = await apiPost("createSales", { payload, user: SESSION });
+      alert("営業データを作成: " + (r.so_id || ""));
+      if($("#so_id")) $("#so_id").value = r.so_id || "";
+    }
+    await renderSales();
+    await populateChubanFromSales();
+  }catch(e){ alert(e.message||e); }
+}
+
+async function deleteSalesUI(){
+  if(!(SESSION && (SESSION.role==="admin" || ["生産技術","生産管理部","営業"].includes(SESSION.department||"")))){
+    alert("権限不足"); return;
+  }
+  const so_id = $("#so_id")?.value.trim() || prompt("削除する受注番号（SO）を入力:");
+  if(!so_id) return;
+  if(!confirm("削除しますか？")) return;
+  try{
+    const r = await apiPost("deleteSales", { so_id, user: SESSION });
+    alert("削除: " + (r.deleted || so_id));
+    if($("#so_id")) $("#so_id").value = "";
+    await renderSales();
+    await populateChubanFromSales();
+  }catch(e){ alert(e.message||e); }
+}
+
+async function promoteSalesUI(){
+  if(!(SESSION && (SESSION.role==="admin" || ["生産技術","生産管理部"].includes(SESSION.department||"")))){
+    alert("権限不足"); return;
+  }
+  const so_id = $("#so_id")?.value.trim() || prompt("受注番号（SO）:");
+  if(!so_id) return;
+  try{
+    // Server side membuat/menautkan 注番 (PO) dari SO.
+    const r = await apiPost("promoteSales", { so_id, user: SESSION });
+    alert(`注番へ昇格しました: SO=${so_id} → PO=${r.po_id||"(不明)"}`);
+    await refreshAll(true);
+    await populateChubanFromSales();
+  }catch(e){ alert(e.message||e); }
+}
+
+async function exportSalesCSV(){
+  try{
+    const qEl=$("#salesQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
+    const rows = await apiGet({action:"listSales", q},{swrKey:"sales"+(q?":"+q:"")});
+    downloadCSV("sales.csv", rows||[]);
+  }catch(e){ alert(e.message||e); }
+}
 
 /* ===== 注番 selector from 受注 ===== */
 async function populateChubanFromSales(){
