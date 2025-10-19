@@ -174,7 +174,9 @@
         <input id="so_part" placeholder="品番" list="dl_hinban">
         <input id="so_note" placeholder="備考">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
-        <input id="so_qty"  type="number" placeholder="数量">
+       <!-- FIX: numeric keyboard on mobile -->
+<input id="so_qty" type="number" inputmode="numeric" pattern="\d*" placeholder="数量">
+
         <input id="so_linked_po" placeholder="関連注番（PO）">
       </div>
     </section>
@@ -260,7 +262,9 @@
         <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
         <!-- 右 -->
         <div class="labeled"><label for="s_delivery">納入日</label><input id="s_delivery" type="date"></div>
-        <input id="s_qty" type="number" min="0" placeholder="数量">
+        <!-- FIX: numeric keyboard on mobile -->
+<input id="s_qty" type="number" min="0" inputmode="numeric" pattern="\d*" placeholder="数量">
+
         <input id="s_part" placeholder="品番" list="dl_hinban">
         <input id="s_drw" placeholder="図番" list="dl_zuban">
         <input id="s_carrier" placeholder="運送会社" list="dl_unso">
