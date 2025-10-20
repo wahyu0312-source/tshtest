@@ -51,6 +51,7 @@
       <button id="btnToShip" class="btn ghost hidden"><i class="fa-solid fa-truck"></i> 出荷予定</button>
       <button id="btnToInvPage" class="btn ghost hidden"><i class="fa-solid fa-boxes-stacked"></i> 在庫</button>
       <button id="btnToFinPage" class="btn ghost hidden"><i class="fa-regular fa-square-check"></i> 完成品一覧</button>
+      <button id="btnToShipped" class="btn ghost"><i class="fa-solid fa-box-archive"></i> 出荷済</button>
       <button id="btnToInvoice" class="btn ghost hidden"><i class="fa-regular fa-file-lines"></i> 請求書</button>
       <button id="btnToCharts" class="btn ghost hidden"><i class="fa-solid fa-chart-simple"></i> 統計</button>
 
@@ -354,6 +355,25 @@
       </div>
     </section>
   </main>
+<section id="pageShipped" class="container hidden">
+  <div class="card">
+    <div class="row-between">
+      <h3>出荷済一覧</h3>
+      <input id="shippedQ" class="input" placeholder="検索（注番/得意先/品名...）">
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>注番</th><th>得意先</th><th>品名</th><th>品番</th><th>図番</th>
+            <th>数量</th><th>状態</th><th>更新</th>
+          </tr>
+        </thead>
+        <tbody id="tbShipped"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
   <!-- INVOICE -->
   <main id="pageInvoice" class="container hidden">
