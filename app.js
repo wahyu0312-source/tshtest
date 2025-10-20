@@ -141,6 +141,43 @@ function showApiError(action, err){
   }
   bar.innerHTML=`<b>APIエラー</b> <code>${action||"-"}</code> — ${err.message||err}`;
 }
+// ==== Realtime watcher (cek perubahan di server) ====
+let LAST_REV = null;
+function startRealtimeWatcher(){
+  setInterval(async () => {
+    try{
+      const r = await apiGet({ action: "rev" }, { revalidate:false });
+      const nowRev = new Date(r.ts).getTime();
+      if (LAST_REV == null) { LAST_REV = nowRev; return; }
+
+      if (nowRev > LAST_REV) {
+        LAST_REV = nowRev;
+        if (!document.hidden) {
+          // refresh widget 進捗状況 & kartu dashboard
+          refreshAll(true);
+          // kalau halaman 出荷予定 sedang terbuka, segarkan juga
+          const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
+          if (shipVisible) renderShipList().catch(()=>{});
+        }
+      }
+    }catch(_){ /* network hiccup: abaikan */ }
+  }, 8000);
+
+  // saat tab kembali fokus, paksa cek ulang
+  document.addEventListener("visibilitychange", ()=>{
+    if(!document.hidden) LAST_REV = 0;
+  });
+}
+function broadcastDataChange(kind){
+  try{ localStorage.setItem('erp:dataChanged', JSON.stringify({kind, ts: Date.now()})); }catch{}
+}
+window.addEventListener('storage', (ev)=>{
+  if (ev.key === 'erp:dataChanged') {
+    refreshAll(true);
+    const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
+    if (shipVisible) renderShipList().catch(()=>{});
+  }
+});
 
 /* ===== Skeleton helpers ===== */
 function tableSkeleton(tbody, rows=7, cols=8){
@@ -377,8 +414,10 @@ if (btnShipReset) btnShipReset.onclick = ()=>{
   // 注番 source selector (plan)
   initChubanSelector();
 
-  // Weather
-  initWeather();
+     // Weather
+   initWeather();
+   // Realtime refresh
+   startRealtimeWatcher();
 });
 
 /* ===== View helpers ===== */
@@ -831,7 +870,8 @@ async function deleteOrderUI(){
 
 /* ===== Ship CRUD ===== */
 async function scheduleUI(){
-  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部"))) return alert("権限不足");
+  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部")))
+    return alert("権限不足");
 
   const po   = $("#s_po")?.value.trim() || "";
   const sdate= $("#s_date")?.value || "";
@@ -846,30 +886,38 @@ async function scheduleUI(){
   const dest = $("#s_dest")?.value.trim() || "";
   const unso = $("#s_carrier")?.value.trim() || "";
 
-  if(!po||!sdate) return alert("注番と出荷日");
+  if(!po || !sdate) return alert("注番と出荷日");
 
-  const idEl=$("#s_shipid"); const shipId=idEl? idEl.value.trim() : "";
+  const idEl = $("#s_shipid");
+  const shipId = idEl ? idEl.value.trim() : "";
 
   try{
-    if(shipId){
+    if (shipId){
       await apiPost("updateShipment",{
-        ship_id:shipId,
-        updates:{po_id:po,scheduled_date:sdate,delivery_date:ddate,qty,
-                 得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso},
-        user:SESSION
+        ship_id: shipId,
+        updates:{
+          po_id:po, scheduled_date:sdate, delivery_date:ddate, qty,
+          得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso
+        },
+        user: SESSION
       });
       alert("出荷予定を編集しました");
-    }else{
-      const r=await apiPost("scheduleShipment",{
-        po_id:po,dateIso:sdate,deliveryIso:ddate,qty,
-        customer:cust,item,part,drw,dest,carrier:unso,user:SESSION
+      broadcastDataChange('ship');
+    } else {
+      const r = await apiPost("scheduleShipment",{
+        po_id:po, dateIso:sdate, deliveryIso:ddate, qty,
+        customer:cust, item, part, drw, dest, carrier:unso, user:SESSION
       });
-      alert("登録: "+r.ship_id);
+      alert("登録: " + r.ship_id);
+      broadcastDataChange('ship');
     }
     refreshAll(true);
-renderShipList().catch(()=>{});
-  }catch(e){ alert(e.message||e); }
+    renderShipList().catch(()=>{});
+  }catch(e){
+    alert(e.message||e);
+  }
 }
+
 async function loadShipForEdit(){
   const idEl=$("#s_shipid"); const sid=idEl?idEl.value.trim():"";
   if(!sid) return alert("出荷ID入力");
@@ -883,23 +931,24 @@ async function loadShipForEdit(){
   }catch(e){ alert(e.message||e); }
 }
 async function deleteShipUI(){
-  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部")))
+  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部"))) 
     return alert("権限不足");
-
-  const idEl = $("#s_shipid");
-  const sid  = idEl ? idEl.value.trim() : "";
+  const idEl=$("#s_shipid"); 
+  const sid=idEl?idEl.value.trim():"";
   if(!sid) return alert("出荷ID入力");
   if(!confirm("削除しますか？")) return;
 
   try{
-    const r = await apiPost("deleteShipment", { ship_id: sid, user: SESSION });
-    alert("削除: " + (r.deleted || sid));
-    await refreshAll(true);
-    await renderShipList().catch(()=>{});
+    const r = await apiPost("deleteShipment",{ship_id:sid,user:SESSION});
+    alert("削除:"+r.deleted);
+    broadcastDataChange('ship');       // (opsional) sinkron tab lain
+    refreshAll(true);
+    renderShipList().catch(()=>{});
   }catch(e){
-    alert(e.message || e);
+    alert(e.message||e);
   }
 }
+
 
 async function openShipByPO(po){
   try{
@@ -1054,9 +1103,15 @@ async function initScan(){
           try{
             const o=await apiGet({action:"ticket",po_id:CURRENT_PO});
             const rule=STATION_RULES[station] || ((_o)=>({current_process:station}));
-            const updates=Object.assign({ok_qty: ok, ng_qty: ng}, rule(o) || {});
+            const updates = Object.assign({ ok_qty: ok, ng_qty: ng }, rule(o) || {});
+await apiPost("updateOrder", { po_id: CURRENT_PO, updates, user: SESSION });
+broadcastDataChange('orders');
+alert("更新しました");
+refreshAll(true);
+
             await apiPost("updateOrder",{po_id:CURRENT_PO,updates:updates,user:SESSION});
-            alert("更新しました"); refreshAll(true);
+broadcastDataChange('orders');   // ⟵ tambahkan ini
+
           }catch(e){ alert(e.message||e); }
         }
         stopScan();
