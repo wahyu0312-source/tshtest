@@ -688,6 +688,7 @@ async function createOrderUI(){
     "品番"  : ($("#c_hinban")?.value || "").trim(),
     "図番"  : ($("#c_zuban")?.value || "").trim(),
     "数量"  : Number($("#c_qty")?.value || 0) || 0
+    "投入日": ($("#c_nyu")?.value || "")
   };
   const editingPoEl = $("#c_po");
   const editingPo = editingPoEl ? editingPoEl.value.trim() : "";
@@ -715,6 +716,8 @@ async function loadOrderForEdit(){
     set("#c_hinban",o["品番"]);
     set("#c_zuban", o["図番"]);
     set("#c_qty",   o["数量"] || 0);
+    set("#c_nyu",  o["投入日"] ? String(o["投入日"]).slice(0,10) : "");
+
     alert("読み込み完了。");
   }catch(e){ alert(e.message || e); }
 }
