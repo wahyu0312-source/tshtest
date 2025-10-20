@@ -307,7 +307,29 @@ if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
   if(btnShipByPO)   btnShipByPO.onclick   = ()=>{ const po=$("#s_po").value.trim(); if(!po) return alert("注番入力"); openShipByPO(po); };
   if(btnShipByID)   btnShipByID.onclick   = ()=>{ const id=prompt("出荷ID:"); if(!id) return; openShipByID(id.trim()); };
   if(btnShipImport) btnShipImport.onclick = ()=> fileShip && fileShip.click();
-  if(fileShip)      fileShip.onchange     = (e)=> handleImport(e, "ship");
+  if(fileShip)      fileShip.onchange     = (e)=> handleImport(e, "ship").then(()=>renderShipList());
+// ===== Ship List filters =====
+const shipCust = $("#shipCust");
+const shipFrom = $("#shipFrom");
+const shipTo   = $("#shipTo");
+const btnShipReset = $("#btnShipReset");
+
+// set default: hari ini
+const today = new Date();
+const iso = (d)=> new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+if (shipFrom && !shipFrom.value) shipFrom.value = iso(today);
+if (shipTo   && !shipTo.value)   shipTo.value   = iso(today);
+
+const rebakeShip = debounce(()=>renderShipList().catch(()=>{}), 200);
+if (shipCust) shipCust.addEventListener("input", rebakeShip);
+if (shipFrom) shipFrom.addEventListener("change", rebakeShip);
+if (shipTo)   shipTo.addEventListener("change", rebakeShip);
+if (btnShipReset) btnShipReset.onclick = ()=>{
+  if (shipCust) shipCust.value = "";
+  if (shipFrom) shipFrom.value = iso(today);
+  if (shipTo)   shipTo.value   = iso(today);
+  renderShipList().catch(()=>{});
+};
 
   // Invoice
   const btnInvPreview = $("#btnInvPreview");
@@ -376,6 +398,8 @@ function show(id){
 
   if(id==="pageCharts") ensureChartsLoaded();
   if(id==="pagePlan")   renderPlanList().catch(console.warn);
+if(id==="pageShip")   renderShipList().catch(console.warn);
+
 }
 function onGlobalShortcut(e){
   const dlg=document.querySelector("dialog[open]");
@@ -560,6 +584,55 @@ async function renderOrders(){
   });
   clearSkeleton(tbody); tbody.appendChild(frag);
 }
+async function renderShipList(){
+  const tbody = $("#tbShipList"); if (!tbody) return;
+  tableSkeleton(tbody, 8, 12);
+
+  const params = { action:"listShipments" };
+  const cust = $("#shipCust")?.value?.trim();
+  const from = $("#shipFrom")?.value;
+  const to   = $("#shipTo")?.value;
+
+  if (cust) params.cust = cust;
+  if (from) params.from = from;
+  if (to)   params.to   = to;
+
+  // ambil data
+  const rows = await apiGet(params, { swrKey: "ship:"+[cust,from,to].join("|") }) || [];
+
+  // sort: hari ini di atas (desc by 出荷日, lalu terbaru)
+  rows.sort((a,b)=>{
+    const ad = new Date(a["出荷日"]||a.ship_date||0).getTime();
+    const bd = new Date(b["出荷日"]||b.ship_date||0).getTime();
+    if (bd !== ad) return bd - ad;
+    const at = new Date(a.updated_at||0).getTime();
+    const bt = new Date(b.updated_at||0).getTime();
+    return bt - at;
+  });
+
+  const fmt = (d)=> d ? new Date(d).toLocaleDateString() : "-";
+
+  const html = rows.map(r=>`
+    <tr>
+      <td class="s">${fmt(r["出荷日"]||r.ship_date)}</td>
+     <td><a class="link" href="javascript:void(0)" onclick="openShipByID('${r["出荷ID"]||r.ship_id||""}')">${r["注番"]||r.po_id||""}</a></td>
+      <td>${r["得意先"]||r.customer||""}</td>
+      <td>${r["品名"]||r.item||""}</td>
+      <td>${r["品番"]||r.part||""}</td>
+      <td>${r["図番"]||r.draw||""}</td>
+      <td>${Number(r["数量"]||r.qty||0)}</td>
+      <td class="s">${fmt(r["納入日"]||r.delivery_date)}</td>
+      <td>${r["送り先"]||r.dest||""}</td>
+      <td>${r["運送会社"]||r.carrier||""}</td>
+      <td class="s">${r["出荷ID"]||r.ship_id||""}</td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+    </tr>
+  `).join("");
+
+  clearSkeleton(tbody);
+  tbody.innerHTML = html;
+}
+
 // ===== Plan list =====
 async function renderPlanList(){
   const tbody = $("#tbPlan"); if(!tbody) return;
@@ -794,6 +867,7 @@ async function scheduleUI(){
       alert("登録: "+r.ship_id);
     }
     refreshAll(true);
+renderShipList().catch(()=>{});
   }catch(e){ alert(e.message||e); }
 }
 async function loadShipForEdit(){
@@ -812,9 +886,12 @@ async function deleteShipUI(){
   if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部"))) return alert("権限不足");
   const idEl=$("#s_shipid"); const sid=idEl?idEl.value.trim():"";
   if(!sid) return alert("出荷ID入力"); if(!confirm("削除しますか？")) return;
-  try{ const r=await apiPost("deleteShipment",{ship_id:sid,user:SESSION}); alert("削除:"+r.deleted); refreshAll(true); }
-  catch(e){ alert(e.message||e); }
-}
+ try{
+    const r=await apiPost("deleteShipment",{ship_id:sid,user:SESSION});
+    alert("削除:"+r.deleted);
+    refreshAll(true);
+    renderShipList().catch(()=>{});
+  }
 async function openShipByPO(po){
   try{
     const d=await apiGet({action:"shipByPo",po_id:po});
