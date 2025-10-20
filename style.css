@@ -154,6 +154,11 @@ input, select, textarea{width:100%;padding:.7rem;border-radius:12px;border:1px s
 .prc-asm-ok { border-color:#bae6fd; background:#e0f2fe; color:#0b4666 }
 .prc-out { border-color:#e2e8f0; background:#f8fafc; color:#334155 }
 .prc-inspect { border-color:#bae6fd; background:#f0f9ff; color:#0b4666 }
+/* Proses baru */
+.prc-inspecting { border-color:#bae6fd; background:#f0f9ff; color:#0b4666; }  /* 検査中 */
+.prc-inspected  { border-color:#a7f3d0; background:#ecfeff; color:#115e59; }  /* 検査済 */
+.prc-shipready  { border-color:#bbf7d0; background:#f0fdf4; color:#14532d; }  /* 出荷準備 */
+.prc-shipped    { border-color:#cbd5e1; background:#f1f5f9; color:#334155; }  /* 出荷済 */
 
 /* Sub-row pada kolom kiri (注番 + 得意先 sejajar) */
 .row-main{display:flex;flex-direction:column;gap:.18rem}
