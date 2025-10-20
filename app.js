@@ -19,31 +19,34 @@ const PROCESSES = [
 ];
 
 /* ===== Station rules ===== */
+/* ===== Station rules ===== */
 const STATION_RULES = {
-  "レザー加工":   (o)=> ({ current_process: "レザー加工" }),
-  "曲げ工程":     (o)=> ({ current_process: "曲げ加工" }), // alias
-  "曲げ加工":     (o)=> ({ current_process: "曲げ加工" }),
-  "外枠組立":     (o)=> ({ current_process: "外枠組立" }),
-  "シャッター組立":(o)=> ({ current_process: "シャッター組立" }),
-  "シャッター溶接":(o)=> ({ current_process: "シャッター溶接" }),
-  "コーキング":   (o)=> ({ current_process: "コーキング" }),
-  "外枠塗装":     (o)=> ({ current_process: "外枠塗装" }),
-  "組立工程":     (o)=> (o.current_process==="組立（組立中）"
-                      ? { current_process:"組立（組立済）" }
-                      : { current_process:"組立（組立中）" }),
-  "検査工程":     (o)=> (o.current_process==="検査工程"
-                      && !["検査保留","不良品（要リペア）","検査済"].includes(o.status)
-                      ? { current_process:"検査工程", status:"検査済" }
-                      : { current_process:"検査工程" }),
-  "出荷工程":     (o)=> (o.status==="出荷準備"
-                      ? { current_process:(o.current_process||"検査工程"), status:"出荷済" }
-                      : { current_process:"検査工程", status:"出荷準備" })
-  "検査中":   (o)=> ({ current_process: "検査中", status: "検査工程" }),
-  "検査済":   (o)=> ({ current_process: "検査済", status: "検査済" }),
-  "出荷準備": (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷準備" }),
-  "出荷済":   (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷済" })
+  "レザー加工":    (o)=> ({ current_process: "レザー加工" }),
+  "曲げ工程":      (o)=> ({ current_process: "曲げ加工" }), // alias
+  "曲げ加工":      (o)=> ({ current_process: "曲げ加工" }),
+  "外枠組立":      (o)=> ({ current_process: "外枠組立" }),
+  "シャッター組立": (o)=> ({ current_process: "シャッター組立" }),
+  "シャッター溶接": (o)=> ({ current_process: "シャッター溶接" }),
+  "コーキング":    (o)=> ({ current_process: "コーキング" }),
+  "外枠塗装":      (o)=> ({ current_process: "外枠塗装" }),
+  "組立工程":      (o)=> (o.current_process==="組立（組立中）"
+                        ? { current_process:"組立（組立済）" }
+                        : { current_process:"組立（組立中）" }),
+  "検査工程":      (o)=> (o.current_process==="検査工程"
+                        && !["検査保留","不良品（要リペア）","検査済"].includes(o.status)
+                        ? { current_process:"検査工程", status:"検査済" }
+                        : { current_process:"検査工程" }),
+  "出荷工程":      (o)=> (o.status==="出荷準備"
+                        ? { current_process:(o.current_process||"検査工程"), status:"出荷済" }
+                        : { current_process:"検査工程", status:"出荷準備" }),
+
+  // ⬇️ penambahan label baru
+  "検査中":        (o)=> ({ current_process: "検査中", status: "検査工程" }),
+  "検査済":        (o)=> ({ current_process: "検査済", status: "検査済" }),
+  "出荷準備":      (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷準備" }),
+  "出荷済":        (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷済" })
 };
-};
+
 
 /* ===== Shortcuts ===== */
 const $     = (s)=> document.querySelector(s);
@@ -60,10 +63,13 @@ const STATUS_CLASS = {
 const PROC_CLASS = {
   "レザー加工":"prc-laser","曲げ加工":"prc-bend","外枠組立":"prc-frame","シャッター組立":"prc-shassy",
   "シャッター溶接":"prc-shweld","コーキング":"prc-caulk","外枠塗装":"prc-tosou",
-  "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out","検査中":"prc-inspecting",      // ⟵ baru
-  "検査済":"prc-inspected",       // ⟵ baru
-  "出荷準備":"prc-shipready",     // ⟵ baru (ditampilkan sebagai “proses” di grid)
-  "出荷済":"prc-shipped"          // ⟵ baru (ditampilkan sebagai “proses” di grid)
+  "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out",
+
+  "検査工程":"prc-inspect",         // ⬅︎ kembalikan ini
+  "検査中":"prc-inspecting",
+  "検査済":"prc-inspected",
+  "出荷準備":"prc-shipready",
+  "出荷済":"prc-shipped"
 };
 
 /* ===== SWR Cache ===== */
@@ -166,6 +172,9 @@ function startRealtimeWatcher(){
           // kalau halaman 出荷予定 sedang terbuka, segarkan juga
           const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
           if (shipVisible) renderShipList().catch(()=>{});
+          const shippedVisible = !document.getElementById('pageShipped')?.classList.contains('hidden');
+if (shippedVisible) renderShippedList().catch(()=>{});
+
         }
       }
     }catch(_){ /* network hiccup: abaikan */ }
@@ -184,8 +193,12 @@ window.addEventListener('storage', (ev)=>{
     refreshAll(true);
     const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
     if (shipVisible) renderShipList().catch(()=>{});
+
+    const shippedVisible = !document.getElementById('pageShipped')?.classList.contains('hidden'); // ⬅︎ tambah
+    if (shippedVisible) renderShippedList().catch(()=>{});                                        // ⬅︎ tambah
   }
 });
+
 
 /* ===== Skeleton helpers ===== */
 function tableSkeleton(tbody, rows=7, cols=8){
@@ -272,8 +285,10 @@ window.addEventListener("DOMContentLoaded", ()=>{
     btnToInvPage: ()=> { show("pageInventory"); renderInventory(); },
     btnToFinPage: ()=> { show("pageFinished"); renderFinished(); },
     btnToInvoice: ()=> show("pageInvoice"),
-    btnToCharts:  ()=> { show("pageCharts"); ensureChartsLoaded(); }
+    btnToCharts:  ()=> { show("pageCharts"); ensureChartsLoaded(); },
+    btnToShipped: ()=> { show("pageShipped"); renderShippedList(); }  // ⟵ baru
   };
+  
   Object.keys(map).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onclick = map[id];
@@ -375,6 +390,8 @@ if (btnShipReset) btnShipReset.onclick = ()=>{
   if (shipTo)   shipTo.value   = iso(today);
   renderShipList().catch(()=>{});
 };
+const shippedQ = $("#shippedQ");
+if (shippedQ) shippedQ.addEventListener("input", debounce(renderShippedList, 200));
 
   // Invoice
   const btnInvPreview = $("#btnInvPreview");
@@ -430,24 +447,38 @@ if (btnShipReset) btnShipReset.onclick = ()=>{
 
 /* ===== View helpers ===== */
 function show(id){
-  const ids=["authView","pageDash","pageSales","pagePlan","pageShip","pageInvoice","pageCharts","pageInventory","pageFinished"];
-  ids.forEach(x=>{ const el=document.getElementById(x); if(el) el.classList.add("hidden"); });
-  const target=document.getElementById(id); if(target) target.classList.remove("hidden");
+  const ids = ["authView","pageDash","pageSales","pagePlan","pageShip","pageInvoice",
+               "pageCharts","pageInventory","pageFinished","pageShipped"]; // +pageShipped
 
+  // sembunyikan semua, tampilkan target
+  ids.forEach(x=>{
+    const el=document.getElementById(x);
+    if(el) el.classList.add("hidden");
+  });
+  const target=document.getElementById(id);
+  if(target) target.classList.remove("hidden");
+
+  // highlight tombol aktif
   const map = {
     pageDash:"btnToDash", pageSales:"btnToSales", pagePlan:"btnToPlan", pageShip:"btnToShip",
-    pageInventory:"btnToInvPage", pageFinished:"btnToFinPage", pageInvoice:"btnToInvoice", pageCharts:"btnToCharts"
+    pageInventory:"btnToInvPage", pageFinished:"btnToFinPage", pageInvoice:"btnToInvoice",
+    pageCharts:"btnToCharts", pageShipped:"btnToShipped"
   };
-  Object.values(map).forEach(b=>{ const el=document.getElementById(b); if(el) el.style.boxShadow="none"; });
+  Object.values(map).forEach(b=>{
+    const el=document.getElementById(b);
+    if(el) el.style.boxShadow="none";
+  });
   const activeBtnId = map[id];
   const btn = activeBtnId && document.getElementById(activeBtnId);
   if(btn) btn.style.boxShadow="0 8px 22px rgba(16,24,40,.12)";
 
+  // lazy render
   if(id==="pageCharts") ensureChartsLoaded();
   if(id==="pagePlan")   renderPlanList().catch(console.warn);
-if(id==="pageShip")   renderShipList().catch(console.warn);
-
+  if(id==="pageShip")   renderShipList().catch(console.warn);
+  if(id==="pageShipped")renderShippedList().catch(console.warn);
 }
+
 function onGlobalShortcut(e){
   const dlg=document.querySelector("dialog[open]");
   if(!dlg) return;
@@ -476,9 +507,9 @@ function enter(){
     const dp = SESSION.department || "";
     ui.textContent = dp ? `${nm}・${dp}` : nm;
   }
-  ["btnToDash","btnToSales","btnToPlan","btnToShip","btnToInvPage","btnToFinPage","btnToInvoice","btnToCharts"].forEach(id=>{
-    const el=$("#"+id); if(el) el.classList.remove("hidden");
-  });
+  ["btnToDash","btnToSales","btnToPlan","btnToShip","btnToInvPage","btnToFinPage","btnToInvoice","btnToCharts","btnToShipped"]
+  .forEach(id=>{ const el=$("#"+id); if(el) el.classList.remove("hidden"); });
+
   const dd=$("#ddSetting"); if(dd) dd.classList.remove("hidden");
   if(!(SESSION.role==="admin" || SESSION.department==="生産技術")){
     const miAddUser=$("#miAddUser"); if(miAddUser) miAddUser.classList.add("hidden");
@@ -697,6 +728,49 @@ async function renderPlanList(){
     </tr>`;
   }).join("");
   clearSkeleton(tbody); tbody.innerHTML = html;
+}
+async function renderShippedList(){
+  const tbody = $("#tbShipped"); if(!tbody) return;
+  tableSkeleton(tbody, 8, 8);
+
+  // Prefer: server memfilter status=出荷済.
+  // Jika backend Anda belum ada, fallback client-side dari listOrders().
+  let rows = [];
+  try{
+    rows = await apiGet({ action:"listOrders", status:"出荷済" }, { swrKey:"orders:shipped" });
+  }catch(_){
+    const all = await apiGet({ action:"listOrders" }, { swrKey:"orders" });
+    rows = (all||[]).filter(r=> r.status === "出荷済");
+  }
+
+  const qEl = $("#shippedQ");
+  let q = qEl ? qEl.value.trim() : "";
+  if (q) {
+    const z = q.toLowerCase();
+    rows = rows.filter(r =>
+      String(r.po_id||"").includes(q) ||
+      String(r["得意先"]||"").includes(q) ||
+      String(r["品名"]||"").includes(q) ||
+      String(r["品番"]||"").includes(q) ||
+      String(r["図番"]||"").includes(q)
+    );
+  }
+
+  const html = rows.map(r=>`
+    <tr>
+      <td><a class="link" href="javascript:void(0)" onclick="openTicket('${r.po_id}')"><b>${r.po_id}</b></a></td>
+      <td>${r["得意先"]||""}</td>
+      <td>${r["品名"]||""}</td>
+      <td>${r["品番"]||""}</td>
+      <td>${r["図番"]||""}</td>
+      <td>${r["数量"]||0}</td>
+      <td><span class="badge ${STATUS_CLASS[r.status]||"st-shipped"}">${r.status||""}</span></td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+    </tr>
+  `).join("");
+
+  clearSkeleton(tbody);
+  tbody.innerHTML = html;
 }
 
 /* ===== Sales (営業) ===== */
@@ -1109,18 +1183,15 @@ async function initScan(){
           const ok = Number($("#man_ok")?$("#man_ok").value:"")||0;
           const ng = Number($("#man_ng")?$("#man_ng").value:"")||0;
           try{
-            const o=await apiGet({action:"ticket",po_id:CURRENT_PO});
-            const rule=STATION_RULES[station] || ((_o)=>({current_process:station}));
-            const updates = Object.assign({ ok_qty: ok, ng_qty: ng }, rule(o) || {});
+           const o = await apiGet({ action:"ticket", po_id: CURRENT_PO });
+const rule = STATION_RULES[station] || (_o => ({ current_process: station }));
+const updates = Object.assign({ ok_qty: ok, ng_qty: ng }, rule(o) || {});
+
 await apiPost("updateOrder", { po_id: CURRENT_PO, updates, user: SESSION });
 broadcastDataChange('orders');
 alert("更新しました");
 refreshAll(true);
-
-            await apiPost("updateOrder",{po_id:CURRENT_PO,updates:updates,user:SESSION});
-broadcastDataChange('orders');   // ⟵ tambahkan ini
-
-          }catch(e){ alert(e.message||e); }
+ }catch(e){ alert(e.message||e); }
         }
         stopScan();
         $("#dlgScan").close();
