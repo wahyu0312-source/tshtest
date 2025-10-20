@@ -222,12 +222,34 @@
         <input id="c_zuban" placeholder="図番" list="dl_zuban">
         <input id="c_qty" type="number" min="0" placeholder="数量">
         <input id="c_nyu" type="date" placeholder="投入日">
+        <div class="labeled">
+   <label for="c_nyu">投入日</label>
+ <input id="c_nyu" type="date">
+ </div>
       </div>
       <datalist id="dl_tokui"></datalist>
       <datalist id="dl_hinmei"></datalist>
       <datalist id="dl_hinban"></datalist>
       <datalist id="dl_zuban"></datalist>
     </section>
+    <section class="card">
+  <header class="row-between">
+    <h3><i class="fa-regular fa-rectangle-list"></i> 生産計画一覧</h3>
+    <input id="planQ" placeholder="検索..." class="input">
+  </header>
+  <div class="table-wrap">
+    <table class="table s">
+      <thead>
+        <tr>
+          <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th>
+          <th>投入日</th><th>状態</th><th>工程</th><th>更新</th>
+        </tr>
+      </thead>
+      <tbody id="tbPlan"></tbody>
+    </table>
+  </div>
+</section>
+
   </main>
 
   <!-- SHIP -->
