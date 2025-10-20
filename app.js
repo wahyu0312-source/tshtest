@@ -687,7 +687,7 @@ async function createOrderUI(){
     "品名"  : ($("#c_hinmei")?.value || "").trim(),
     "品番"  : ($("#c_hinban")?.value || "").trim(),
     "図番"  : ($("#c_zuban")?.value || "").trim(),
-    "数量"  : Number($("#c_qty")?.value || 0) || 0
+    "数量"  : Number($("#c_qty")?.value || 0) || 0,
     "投入日": ($("#c_nyu")?.value || "")
   };
   const editingPoEl = $("#c_po");
