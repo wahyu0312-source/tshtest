@@ -252,6 +252,19 @@ async function initWeather(){
       city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
       setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
     } catch (_){ /* ignore */ }
+// reverse geocoding (opsional; boleh gagal)
+try {
+  // HINDARI di GitHub Pages biar tidak spam error CORS
+  if (!location.hostname.endsWith("github.io")) {
+    const rev = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`
+    ).then(r => r.json());
+    city = (rev && rev.results && rev.results[0]) 
+      ? (rev.results[0].name || rev.results[0].admin1 || "現在地") 
+      : "現在地";
+    setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
+  }
+} catch (_) { /* ignore */ }
 
   }catch(e){
     console.warn("weather:", e);
