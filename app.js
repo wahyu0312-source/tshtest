@@ -890,7 +890,7 @@ async function deleteShipUI(){
     const r=await apiPost("deleteShipment",{ship_id:sid,user:SESSION});
     alert("削除:"+r.deleted);
     refreshAll(true);
-    renderShipList().catch(()=>{});
+    renderShipList().catch(()=>{});}
   }
 async function openShipByPO(po){
   try{
