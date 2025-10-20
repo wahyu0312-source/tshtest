@@ -289,7 +289,8 @@ window.addEventListener("DOMContentLoaded", ()=>{
   if(btnPlanDelete)  btnPlanDelete.onclick  = deleteOrderUI;
   if(btnPlanImport)  btnPlanImport.onclick  = ()=> filePlan && filePlan.click();
   if(filePlan)       filePlan.onchange      = (e)=> handleImport(e, "orders");
-
+const planQ = $("#planQ");
+if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
   // Ship
   const btnSchedule    = $("#btnSchedule");
   const btnShipExport  = $("#btnShipExport");
@@ -374,6 +375,7 @@ function show(id){
   if(btn) btn.style.boxShadow="0 8px 22px rgba(16,24,40,.12)";
 
   if(id==="pageCharts") ensureChartsLoaded();
+  if(id==="pagePlan")   renderPlanList().catch(console.warn);
 }
 function onGlobalShortcut(e){
   const dlg=document.querySelector("dialog[open]");
@@ -558,6 +560,24 @@ async function renderOrders(){
   });
   clearSkeleton(tbody); tbody.appendChild(frag);
 }
+// ===== Plan list =====
+async function renderPlanList(){
+  const tbody = $("#tbPlan"); if(!tbody) return;
+  tableSkeleton(tbody, 8, 8);
+  const qEl=$("#planQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
+  const rows = await apiGet({action:"listOrders", q},{swrKey:"orders"+(q?":"+q:"")});
+  const html = (rows||[]).map(r=>{
+    const nyu = r["投入日"] ? new Date(r["投入日"]).toLocaleDateString() : "-";
+    return `<tr>
+      <td><a href="javascript:void(0)" onclick="openTicket('${r.po_id}')" class="link"><b>${r.po_id}</b></a><div class="row-sub"><span class="muted">得意先:</span> ${r["得意先"]||"-"}</div></td>
+      <td>${r["品名"]||""}</td><td>${r["品番"]||""}</td><td>${r["図番"]||""}</td>
+      <td class="s muted">${nyu}</td>
+      <td>${r.status||""}</td><td>${r.current_process||""}</td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+    </tr>`;
+  }).join("");
+  clearSkeleton(tbody); tbody.innerHTML = html;
+}
 
 /* ===== Sales (営業) ===== */
 async function renderSales(){
@@ -702,6 +722,7 @@ async function createOrderUI(){
       if (editingPoEl) editingPoEl.value = r.po_id;
     }
     refreshAll();
+    renderPlanList().catch(()=>{});
   }catch(e){ alert(e.message || e); }
 }
 async function loadOrderForEdit(){
