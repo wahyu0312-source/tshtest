@@ -11,6 +11,8 @@ function resolveApiBase(){
 Object.defineProperty(window, 'API_BASE', { get: resolveApiBase });
 
 const API_KEY = ""; // biarkan kosong agar tidak memicu preflight
+// Di GitHub Pages, CORS ke Apps Script selalu blocked → pakai JSONP langsung
+const PREFER_JSONP = location.hostname.endsWith("github.io");
 
 /* ===== Processes ===== */
 const PROCESSES = [
@@ -101,6 +103,14 @@ function jsonp(action, params={}){
 }
 async function apiPost(action, body){
   const payload = { action, ...(API_KEY?{apiKey:API_KEY}:{}) , ...body };
+
+  // ⬇️ Langsung JSONP di github.io agar tak memicu error CORS
+  if (PREFER_JSONP) {
+    const data = await jsonp(action, payload);
+    if (data == null) throw new Error("Empty server data");
+    return data;
+  }
+
   try{
     const res = await fetch(resolveApiBase(), {
       method:"POST", mode:"cors",
@@ -121,18 +131,29 @@ async function apiPost(action, body){
     return data;
   }
 }
+
 async function apiGet(params, {swrKey=null, revalidate=true} = {}){
   const final = {...params, ...(API_KEY?{apiKey:API_KEY}:{})};
   const url=resolveApiBase()+"?"+new URLSearchParams(final).toString();
   const key = swrKey || ("GET:"+url);
+
+  // ⬇️ Kalau di github.io, JANGAN coba fetch; langsung JSONP dan simpan cache
+  if (PREFER_JSONP) {
+    const data = await jsonp(final.action || params.action || "unknown", final);
+    SWR.set(key, data);
+    return data;
+  }
+
   const cached = SWR.get(key);
   if (cached && revalidate){
+    // ⬇️ Background revalidate via fetch hanya kalau bukan github.io
     fetch(url,{cache:"no-store", mode:"cors"}).then(r=>r.text()).then(txt=>{
       try{ const j=JSON.parse(txt); if(j.ok){ SWR.set(key, j.data); document.dispatchEvent(new CustomEvent("swr:update",{detail:{key}})); } }
       catch{ /* ignore */ }
     }).catch(()=>{ /* ignore */ });
     return cached;
   }
+
   try{
     const res=await fetch(url,{cache:"no-store", mode:"cors"});
     const txt=await res.text(); const j=JSON.parse(txt);
@@ -144,6 +165,7 @@ async function apiGet(params, {swrKey=null, revalidate=true} = {}){
     SWR.set(key, data); return data;
   }
 }
+
 function showApiError(action, err){
   console.error("API FAIL:", action, err);
   let bar=document.getElementById("errbar");
@@ -245,13 +267,7 @@ async function initWeather(){
       setUI(city, null);
     }
 
-    // reverse geocoding (opsional; boleh gagal)
-    try {
-      const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`)
-        .then(r => r.json());
-      city = (rev && rev.results && rev.results[0]) ? (rev.results[0].name || rev.results[0].admin1 || "現在地") : "現在地";
-      setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
-    } catch (_){ /* ignore */ }
+    
 // reverse geocoding (opsional; boleh gagal)
 try {
   // HINDARI di GitHub Pages biar tidak spam error CORS
