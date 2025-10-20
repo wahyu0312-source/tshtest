@@ -883,15 +883,24 @@ async function loadShipForEdit(){
   }catch(e){ alert(e.message||e); }
 }
 async function deleteShipUI(){
-  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部"))) return alert("権限不足");
-  const idEl=$("#s_shipid"); const sid=idEl?idEl.value.trim():"";
-  if(!sid) return alert("出荷ID入力"); if(!confirm("削除しますか？")) return;
- try{
-    const r=await apiPost("deleteShipment",{ship_id:sid,user:SESSION});
-    alert("削除:"+r.deleted);
-    refreshAll(true);
-    renderShipList().catch(()=>{});}
+  if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部")))
+    return alert("権限不足");
+
+  const idEl = $("#s_shipid");
+  const sid  = idEl ? idEl.value.trim() : "";
+  if(!sid) return alert("出荷ID入力");
+  if(!confirm("削除しますか？")) return;
+
+  try{
+    const r = await apiPost("deleteShipment", { ship_id: sid, user: SESSION });
+    alert("削除: " + (r.deleted || sid));
+    await refreshAll(true);
+    await renderShipList().catch(()=>{});
+  }catch(e){
+    alert(e.message || e);
   }
+}
+
 async function openShipByPO(po){
   try{
     const d=await apiGet({action:"shipByPo",po_id:po});
