@@ -15,7 +15,7 @@ const API_KEY = ""; // biarkan kosong agar tidak memicu preflight
 /* ===== Processes ===== */
 const PROCESSES = [
   "レザー加工","曲げ加工","外枠組立","シャッター組立","シャッター溶接","コーキング",
-  "外枠塗装","組立（組立中）","組立（組立済）","外注","検査工程"
+  "外枠塗装","組立（組立中）","組立（組立済）","外注","検査中","検査済","出荷準備","出荷済"
 ];
 
 /* ===== Station rules ===== */
@@ -38,6 +38,11 @@ const STATION_RULES = {
   "出荷工程":     (o)=> (o.status==="出荷準備"
                       ? { current_process:(o.current_process||"検査工程"), status:"出荷済" }
                       : { current_process:"検査工程", status:"出荷準備" })
+  "検査中":   (o)=> ({ current_process: "検査中", status: "検査工程" }),
+  "検査済":   (o)=> ({ current_process: "検査済", status: "検査済" }),
+  "出荷準備": (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷準備" }),
+  "出荷済":   (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷済" })
+};
 };
 
 /* ===== Shortcuts ===== */
@@ -55,7 +60,10 @@ const STATUS_CLASS = {
 const PROC_CLASS = {
   "レザー加工":"prc-laser","曲げ加工":"prc-bend","外枠組立":"prc-frame","シャッター組立":"prc-shassy",
   "シャッター溶接":"prc-shweld","コーキング":"prc-caulk","外枠塗装":"prc-tosou",
-  "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out","検査工程":"prc-inspect"
+  "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out","検査中":"prc-inspecting",      // ⟵ baru
+  "検査済":"prc-inspected",       // ⟵ baru
+  "出荷準備":"prc-shipready",     // ⟵ baru (ditampilkan sebagai “proses” di grid)
+  "出荷済":"prc-shipped"          // ⟵ baru (ditampilkan sebagai “proses” di grid)
 };
 
 /* ===== SWR Cache ===== */
