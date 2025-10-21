@@ -753,6 +753,13 @@ async function renderShippedList(){
   clearSkeleton(tbody);
   tbody.innerHTML = html;
 }
+// === util: multi 注番 ===
+function parseMultiIds(raw){
+  return String(raw||"")
+    .split(/[\s,;\n\r\t]+/)
+    .map(s=>s.trim())
+    .filter(Boolean);
+}
 
 /* ===== Sales (営業) ===== */
 async function renderSales(){
@@ -760,19 +767,21 @@ async function renderSales(){
   tableSkeleton(tbody, 7, 10);
   const qEl=$("#salesQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
   const rows=await apiGet({action:"listSales",q},{swrKey:"sales"+(q?":"+q:"")});
-  tbody.innerHTML = rows.map(r=> `
-    <tr>
-      <td>${r.so_id||""}</td>
-      <td class="s muted">${fmtD(r["受注日"])}</td>
-      <td>${r["得意先"]||""}</td>
-      <td>${r["品名"]||""}</td>
-      <td>${(r["品番"]||"")}/${(r["図番"]||"")}</td>
-      <td>${r["数量"]||0}</td>
-      <td class="s muted">${fmtD(r["希望納期"])}</td>
-      <td><span class="badge">${r.status||""}</span></td>
-      <td>${r["linked_po_id"]||""}</td>
-      <td class="s muted">${fmtDT(r["更新日時"]||r["updated_at"])}</td>
-    </tr>`).join("");
+ tbody.innerHTML = rows.map(r=> `
+  <tr>
+    <td>${r.so_id||""}</td>
+    <td class="s muted">${fmtD(r["受注日"])}</td>
+    <td>${r["得意先"]||""}</td>
+    <td>${r["品名"]||""}</td>
+    <td>${(r["品番"]||"")}/${(r["図番"]||"")}</td>
+    <td>${r["機種"]||""}</td>
+    <td>${r["数量"]||0}</td>
+    <td class="s muted">${fmtD(r["希望納期"])}</td>
+    <td><span class="badge">${r.status||""}</span></td>
+    <td>${r["linked_po_id"]||""}</td>
+    <td class="s muted">${fmtDT(r["更新日時"]||r["updated_at"])}</td>
+  </tr>`).join("");
+
 }
 
 /* ==== Sales CRUD / Actions ==== */
@@ -782,23 +791,33 @@ async function saveSalesUI(){
   }
   const so_id   = $("#so_id")?.value.trim() || "";
   const recv    = $("#so_date")?.value || "";
-  const cust    = $("#so_tokui")?.value?.trim?.() || $("#so_cust")?.value?.trim?.() || "";
+  const cust    = $("#so_cust")?.value?.trim?.() || $("#so_cust")?.value?.trim?.() || "";
   const item    = $("#so_item")?.value.trim() || "";
   const part    = $("#so_part")?.value.trim() || "";
   const drw     = $("#so_drw")?.value.trim()  || "";
   const sei     = $("#so_sei")?.value.trim()  || "";
   const qty     = Number($("#so_qty")?.value || 0) || 0;
-  const due     = $("#so_due")?.value || $("#so_req")?.value || "";
+  const due     = $("#so_req")?.value || "";
   const note    = $("#so_note")?.value || "";
   const status  = $("#so_status")?.value || "";
   const kishu   = $("#so_kishu")?.value.trim() || "";
-  const linked0 = $("#so_linked_po")?.value?.trim?.() || "";
-  const linkedList = parseMultiIds(linked0);
 
+  const linked0   = $("#so_linked_po")?.value?.trim?.() || "";
+  const linkedList= parseMultiIds(linked0);
+
+  // <- ERROR di sini sebelumnya: tidak ada penutup "}" dan koma
   const payload = {
-    "受注日": recv, "得意先": cust, "品名": item, "品番": part, "図番": drw,
-    "製番号": sei, "数量": qty, "希望納期": due, "備考": note, status,
-    "linked_po_id": linkedList.join(","),   // multi 注番
+    "受注日": recv,
+    "得意先": cust,
+    "品名": item,
+    "品番": part,
+    "図番": drw,
+    "製番号": sei,
+    "数量": qty,
+    "希望納期": due,
+    "備考": note,
+    status,
+    "linked_po_id": linkedList.join(","), // multi 注番
     "機種": kishu
   };
 
@@ -959,43 +978,47 @@ async function scheduleUI(){
   const item = $("#s_item")?.value.trim() || "";
   const part = $("#s_part")?.value.trim() || "";
   const drw  = $("#s_drw")?.value.trim()  || "";
-  const kishu= $("#s_kishu")?.value.trim()|| "";
+  const kishu= $("#s_kishu")?.value.trim() || "";
   const dest = $("#s_dest")?.value.trim() || "";
   const unso = $("#s_carrier")?.value.trim() || "";
 
   if(!po || !sdate) return alert("注番と出荷日");
 
-  const idEl = $("#s_shipid");
-  const shipId = idEl ? idEl.value.trim() : "";
+  const idEl  = $("#s_shipid");
+  const shipId= idEl ? idEl.value.trim() : "";
 
   try{
     if (shipId){
       await apiPost("updateShipment",{
         ship_id: shipId,
         updates:{
-          po_id:po, scheduled_date:sdate, delivery_date:ddate, qty,
-          得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso, 機種:kishu
+          po_id: po,
+          scheduled_date: sdate,
+          delivery_date: ddate,
+          qty,
+          得意先: cust, 品名: item, 品番: part, 図番: drw, 送り先: dest, 運送会社: unso, 機種: kishu
         },
         user: SESSION
       });
       alert("出荷予定を編集しました");
       broadcastDataChange('ship');
     } else {
-      for (const one of (poList.length ? poList : [po])) {
+      const list = poList.length ? poList : [po];
+      for (const one of list){
         await apiPost("scheduleShipment",{
-          po_id: one, dateIso:sdate, deliveryIso:ddate, qty,
-          customer:cust, item, part, drw, dest, carrier:unso, kishu, user:SESSION
+          po_id: one, dateIso: sdate, deliveryIso: ddate, qty,
+          customer: cust, item, part, drw, dest, carrier: unso, kishu, user: SESSION
         });
       }
-      alert(`登録: 出荷予定 × ${poList.length||1}`);
+      alert(`登録: 出荷予定 × ${list.length}`);
       broadcastDataChange('ship');
     }
+
     refreshAll(true);
     renderShipList().catch(()=>{});
-  }catch(e){
-    alert(e.message||e);
-  }
+  }catch(e){ alert(e.message||e); }
 }
+
 
 async function loadShipForEdit(){
   const idEl=$("#s_shipid"); const sid=idEl?idEl.value.trim():"";
@@ -1304,7 +1327,7 @@ async function renderShipList(){
 
 /* ===== Invoice ===== */
 async function previewInvoiceUI(){
-  const info={
+  const info = {
     customer: $("#inv_customer")?$("#inv_customer").value.trim():"",
     from: $("#inv_from")?$("#inv_from").value:"",
     to:   $("#inv_to")?$("#inv_to").value:"",
@@ -1316,12 +1339,13 @@ async function previewInvoiceUI(){
     INV_PREVIEW.info = {
       得意先: d.info.得意先, 期間自: d.info.期間自, 期間至: d.info.期間至,
       請求日: $("#inv_date")?($("#inv_date").value || new Date().toISOString().slice(0,10)) : new Date(),
-      通貨: $("#inv_currency")?$("#inv_currency").value:"JPY", メモ: $("#inv_memo")?$("#inv_memo").value:""
+      通貨: $("#inv_currency")?$("#inv_currency").value:"JPY",
+      メモ: $("#inv_memo")?$("#inv_memo").value:""
     };
 
+    // filter by multi-PO (optional)
     const poFilter = parseMultiIds($("#inv_pos")?.value||"");
-    let lines = (d.lines||[]).map(l=> ({...l, 単価: l.単価||0, 金額: (l.数量||0)*(l.単価||0)}));
-
+    let lines = d.lines.map(l=> ({...l, 単価: l.単価||0, 金額: (l.数量||0)*(l.単価||0)}));
     if (poFilter.length){
       const set = new Set(poFilter);
       lines = lines.filter(l=>{
@@ -1329,11 +1353,12 @@ async function previewInvoiceUI(){
         return String(po).split(/[,\s]+/).some(x=> set.has(x));
       });
     }
-
     INV_PREVIEW.lines = lines;
+
     renderInvoiceLines();
   }catch(e){ alert(e.message||e); }
 }
+
 function renderInvoiceLines(){
   const tb=$("#invLines"); if(!tb) return;
   let sub=0;
