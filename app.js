@@ -1562,93 +1562,51 @@ function handleImport(e, type){
   else       reader.readAsArrayBuffer(file);
 }
 /* ===================== THEME PICKER + BURGER ===================== */
-const THEMES = [
-  {name:"Dark Navy",  bg:"#0b1220"},
-  {name:"Black",      bg:"#0b0b0b"},
-  {name:"Blue",       bg:"#0f2747"},
-  {name:"Green",      bg:"#0f2b22"},
-  {name:"Gray",       bg:"#111827"},
-  {name:"Neutral",    bg:"#1f2937"},
-  {name:"Light Gray", bg:"#f3f4f6"},
-  {name:"White",      bg:"#ffffff"},
-];
-
-function pickTextFor(bgHex){
-  const hex = bgHex.replace('#','');
-  const r = parseInt(hex.substring(0,2),16),
-        g = parseInt(hex.substring(2,4),16),
-        b = parseInt(hex.substring(4,6),16);
-  const yiq = (r*299 + g*587 + b*114) / 1000;
-  return yiq >= 140 ? "#0b1220" : "#e6eef7";
+/* ===== THEME (sinkron dengan CSS: --bg, --fg, --muted, --card, --border) ===== */
+function _bestTextColor(hex){
+  const h = String(hex||'#000').replace('#','').padEnd(6,'0');
+  const r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+  const yiq=(r*299+g*587+b*114)/1000;
+  return yiq>=150 ? '#0f172a' : '#ffffff';
 }
-function deriveTone(bgHex){
-  const isLight = pickTextFor(bgHex) === "#0b1220";
-  const card = isLight ? "#ffffff" : shade(bgHex, 8);
-  const border = isLight ? "#e5e7eb" : shade(bgHex, 22);
-  return {card, border};
-  function shade(hex, pct){
-    const h = hex.replace('#','');
-    const f = (i)=> Math.max(0, parseInt(h.substr(i,2),16) - Math.round(2.55*pct));
-    return "#"+[0,2,4].map(f).map(v=>v.toString(16).padStart(2,'0')).join('');
-  }
+function applyBackground(hex){
+  const fg=_bestTextColor(hex);
+  const root=document.documentElement;
+  root.style.setProperty('--bg', hex);
+  root.style.setProperty('--fg', fg);
+  root.style.setProperty('--muted', fg==='#ffffff' ? 'rgba(255,255,255,.75)' : 'rgba(15,23,42,.70)');
+  root.style.setProperty('--card', fg==='#ffffff' ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)');
+  root.style.setProperty('--border', fg==='#ffffff'
+    ? 'color-mix(in oklab, #fff 18%, transparent)'
+    : 'color-mix(in oklab, #0f172a 18%, transparent)');
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', hex);
+  try{ localStorage.setItem('UI_THEME_BG', hex); }catch{}
 }
-function applyTheme(bgHex){
-  const text = pickTextFor(bgHex);
-  const {card, border} = deriveTone(bgHex);
-  const root = document.documentElement.style;
-  root.setProperty('--bg', bgHex);
-  root.setProperty('--text', text);
-  root.setProperty('--card', card);
-  root.setProperty('--border', border);
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', bgHex);
-  try{ localStorage.setItem('UI_THEME_BG', bgHex); }catch(_){}
-}
-function buildThemeDialog(){
-  const grid = document.getElementById('themeGrid');
-  if (!grid) return;
-  grid.innerHTML = THEMES.map(t=>`
-    <button class="theme-swatch" data-bg="${t.bg}" title="${t.name}">
-      <span class="theme-dot" style="background:${t.bg}"></span>
-      <span class="theme-name">${t.name}</span>
-    </button>`).join('');
-  grid.querySelectorAll('.theme-swatch').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      applyTheme(btn.getAttribute('data-bg'));
-      document.getElementById('dlgTheme').close();
-    }, {passive:true});
-  });
-}
-function initBurger(){
-  const burger = document.getElementById('btnBurger');
-  const right  = document.querySelector('.nav-right');
-  if (!burger || !right) return;
-  burger.addEventListener('click', ()=>{
-    const open = right.classList.toggle('open');
-    burger.classList.toggle('open', open);
-    burger.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', (e)=>{
-    if (!right.classList.contains('open')) return;
-    if (!(right.contains(e.target) || burger.contains(e.target))){
-      right.classList.remove('open'); burger.classList.remove('open');
-    }
-  });
-}
-(function initThemeAndBurger(){
+(function bootTheme(){
   window.addEventListener('DOMContentLoaded', ()=>{
-    const saved = localStorage.getItem('UI_THEME_BG');
-    if (saved) applyTheme(saved);
-    const miTheme = document.getElementById('miTheme');
-    if (miTheme){
+    const saved=localStorage.getItem('UI_THEME_BG');
+    if(saved) applyBackground(saved);
+    const miTheme=document.getElementById('miTheme');
+    const dlg=document.getElementById('dlgTheme');
+    if(miTheme && dlg){
       miTheme.addEventListener('click', ()=>{
-        buildThemeDialog();
-        document.getElementById('dlgTheme').showModal();
+        const grid=dlg.querySelector('#themeGrid');
+        const presets=[
+          ['#f8fafc','Light'], ['#e2e8f0','Gray'], ['#334155','Slate'],
+          ['#0b3b6a','Blue'], ['#14532d','Green'], ['#111827','Black'],
+          ['#0f172a','Dark Navy']
+        ];
+        grid.innerHTML = presets.map(([v,n]) =>
+          `<button class="chip" data-bg="${v}" style="background:${v};color:${_bestTextColor(v)}">${n}</button>`
+        ).join('');
+        grid.onclick = (e)=>{ const b=e.target.closest('[data-bg]'); if(!b) return; applyBackground(b.dataset.bg); };
+        dlg.showModal();
       });
     }
-    initBurger();
   });
 })();
+
 /* ===== Mobile Burger / Drawer ===================================== */
 (function(){
   const nav   = document.getElementById('mobileNav');
@@ -1657,6 +1615,19 @@ function initBurger(){
 
   const panel = nav.querySelector('.panel');
   const scrim = nav.querySelector('.scrim');
+/* ===== Mobile Burger / Drawer ===================================== */
+(function(){
+  ...
+  nav.addEventListener('click', (e)=>{
+    const t = e.target;
+    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); }
+    // Klik item → trigger tombol topbar aslinya via id di data-go
+    if (t && t.matches('[data-go]')){
+      ...
+    }
+  }, {passive:true});
+  ...
+})();
 
   function openNav(){
     nav.hidden = false;
@@ -1676,17 +1647,36 @@ function initBurger(){
   function toggle(){ (nav.hidden || !nav.classList.contains('open')) ? openNav() : closeNav(); }
 
   btn.addEventListener('click', toggle, {passive:true});
-  nav.addEventListener('click', (e)=>{
+    nav.addEventListener('click', (e)=>{
     const t = e.target;
-    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); }
-    // Klik item → trigger tombol topbar aslinya via id di data-go
-    if (t && t.matches('[data-go]')){
-      const id = t.getAttribute('data-go');
+
+    // tutup?
+    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); return; }
+
+    // navigasi ke halaman (mirror tombol topbar)
+    const go = t && t.closest('[data-go]');
+    if (go){
+      const id = go.getAttribute('data-go');
       const realBtn = document.getElementById(id);
       if (realBtn) realBtn.click();
       closeNav();
+      return;
+    }
+
+    // actions di 設定
+    const act = t && t.closest('[data-act]');
+    if (act){
+      const m = act.getAttribute('data-act');
+      if (m==='stationQR') openStationQR();
+      if (m==='addUser')   openAddUserModal();
+      if (m==='changePass') changePasswordUI();
+      if (m==='theme'){ document.getElementById('miTheme')?.click(); }
+      if (m==='logout'){ SESSION=null; localStorage.removeItem('erp_session'); location.reload(); }
+      closeNav();
+      return;
     }
   }, {passive:true});
+
 
   // ESC to close
   document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && nav.classList.contains('open')) closeNav(); });
