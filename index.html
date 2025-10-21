@@ -33,15 +33,37 @@
   </style>
 </head>
 <body>
-  <!-- NAV -->
-  <nav class="nav">
-    <div class="nav-left">
-      <!-- ⬇️ Tepat setelah <div class="nav-left">...</div> -->
-<button id="btnBurger" class="burger" aria-label="Menu" aria-expanded="false">
+  <!-- Tambah di dalam header/topbar, dekat logo -->
+<button id="btnBurger" class="burger" aria-label="メニュー" aria-expanded="false" aria-controls="mobileNav">
   <span></span><span></span><span></span>
 </button>
 
-<!-- …biarkan elemen lain apa adanya… -->
+<nav id="mobileNav" class="nav-drawer" hidden>
+  <div class="scrim" data-close></div>
+  <div class="panel">
+    <div class="panel-head">
+      <strong>メニュー</strong>
+      <button class="close" data-close aria-label="閉じる">×</button>
+    </div>
+    <ul class="mnav">
+      <li><button class="linklike" data-go="btnToDash">ダッシュボード</button></li>
+      <li><button class="linklike" data-go="btnToSales">受注（営業）</button></li>
+      <li><button class="linklike" data-go="btnToPlan">生産計画</button></li>
+      <li><button class="linklike" data-go="btnToShip">出荷予定</button></li>
+      <li class="sep"></li>
+      <li class="group">
+        <details>
+          <summary>設定</summary>
+          <button class="linklike" id="miStationQR">工程QR</button>
+          <button class="linklike" id="miAddUser">ユーザー追加</button>
+          <button class="linklike" id="miChangePass">パスワード変更</button>
+          <button class="linklike" id="btnLogout">ログアウト</button>
+        </details>
+      </li>
+    </ul>
+  </div>
+</nav>
+
 
       <img src="assets/tsh.png" class="logo" alt="">
       <span class="brand">東京精密発條株式会社システム</span>
