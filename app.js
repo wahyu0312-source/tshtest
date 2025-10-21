@@ -575,7 +575,7 @@ async function addUserFromLoginUI(){
   if(!(SESSION.role==="admin"||SESSION.department==="生産技術")) return alert("権限不足（生産技術）");
   const payload={
     username:$("#nuUser")?$("#nuUser").value.trim():"", password:$("#nuPass")?$("#nuPass").value.trim():"",
-    full_name:$("#nuName")?$("#nuName").value.trim():"", department:=$("#nuDept")?$("#nuDept").value:"", role:=$("#nuRole")?$("#nuRole").value:"member"
+    full_name:$("#nuName")?$("#nuName").value.trim():"", department:$("#nuDept")?$("#nuDept").value:"", role:$("#nuRole")?$("#nuRole").value:"member"
   };
   if(!payload.username||!payload.password||!payload.full_name) return alert("必須項目");
   try{ await apiPost("createUser",{user:SESSION,payload}); alert("作成しました"); }
