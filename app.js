@@ -12,7 +12,7 @@ Object.defineProperty(window, 'API_BASE', { get: resolveApiBase });
 
 const API_KEY = ""; // biarkan kosong agar tidak memicu preflight
 // Di GitHub Pages, CORS ke Apps Script selalu blocked → pakai JSONP langsung
-const PREFER_JSONP = location.hostname.endsWith("github.io");
+const PREFER_JSONP = false;
 
 /* ===== Processes ===== */
 const PROCESSES = [
@@ -81,85 +81,81 @@ const SWR = {
 function toQS(obj){
   return Object.keys(obj||{}).map(k => encodeURIComponent(k)+"="+encodeURIComponent(obj[k]??"")).join("&");
 }
-function jsonp(action, params={}){
+function jsonp(action, params = {}){
   return new Promise((resolve, reject)=>{
-    const cb = "__jp"+Date.now()+Math.floor(Math.random()*1e6);
-    const q = { action, ...params, callback:cb, jsonp:1 };
+    const cb = "__jp" + Date.now() + Math.floor(Math.random()*1e6);
+    const q  = { action, ...params, callback: cb, jsonp: 1, _: Date.now() }; // cache-bust
     const url = resolveApiBase() + "?" + toQS(q);
+
     const s = document.createElement("script");
-    const timer = setTimeout(()=>{ cleanup(); reject(new Error("JSONP timeout")); }, 12000);
-    function cleanup(){ clearTimeout(timer); delete window[cb]; s.remove(); }
+    let done = false;
+    const timer = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, 15000);
+
+    function cleanup(){
+      if(done) return;
+      done = true;
+      clearTimeout(timer);
+      try{ delete window[cb]; }catch{}
+      try{ s.remove(); }catch{}
+    }
+
     window[cb] = function(resp){
       cleanup();
-      if(!resp || resp.ok===false) reject(new Error(resp && resp.error || "Server error"));
-      else resolve(resp.data);
+      if(!resp || resp.ok === false){
+        reject(new Error((resp && resp.error) || "Server error"));
+      }else{
+        resolve(resp.data);
+      }
     };
-    s.onerror = ()=>{ cleanup(); reject(new Error("JSONP network error")); };
-    s.src = url; document.head.appendChild(s);
+
+    s.onerror = () => { cleanup(); reject(new Error("JSONP network error")); };
+    s.async = true;
+    s.referrerPolicy = "no-referrer";
+    s.crossOrigin = "anonymous";
+    s.src = url;
+    document.head.appendChild(s);
   });
 }
-async function apiPost(action, body){
-  const payload = { action, ...(API_KEY?{apiKey:API_KEY}:{}) , ...body };
 
-  // ⬇️ Langsung JSONP di github.io agar tak memicu error CORS
-  if (PREFER_JSONP) {
-    const data = await jsonp(action, payload);
-    if (data == null) throw new Error("Empty server data");
-    return data;
-  }
-
-  try{
-    const res = await fetch(resolveApiBase(), {
-      method:"POST", mode:"cors",
-      headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
-      body: toQS(payload), cache:"no-store",
-    });
-    const txt = await res.text();
-    let j; try{ j = JSON.parse(txt); }catch{ throw new Error("Invalid server response"); }
-    if (!j || j.ok === false) throw new Error(j?.error || "API error");
-    if (j.data == null || (typeof j.data === "object" && Object.keys(j.data).length === 0)) {
-      throw new Error("Empty server data");
-    }
-    return j.data;
-  }catch(err){
-    console.warn("POST fell back to JSONP:", err);
-    const data = await jsonp(action, payload);
-    if (data == null) throw new Error("Empty server data");
-    return data;
-  }
-}
+apiGet
 
 async function apiGet(params, {swrKey=null, revalidate=true} = {}){
-  const final = {...params, ...(API_KEY?{apiKey:API_KEY}:{})};
-  const url=resolveApiBase()+"?"+new URLSearchParams(final).toString();
-  const key = swrKey || ("GET:"+url);
+  const final = { ...params, ...(API_KEY ? { apiKey: API_KEY } : {}) };
+  const url   = resolveApiBase() + "?" + new URLSearchParams(final).toString();
+  const key   = swrKey || ("GET:" + url);
 
-  // ⬇️ Kalau di github.io, JANGAN coba fetch; langsung JSONP dan simpan cache
-  if (PREFER_JSONP) {
-    const data = await jsonp(final.action || params.action || "unknown", final);
-    SWR.set(key, data);
-    return data;
-  }
-
+  // SWR: serve cache dulu (kalau ada), sambil revalidate di belakang
   const cached = SWR.get(key);
   if (cached && revalidate){
-    // ⬇️ Background revalidate via fetch hanya kalau bukan github.io
-    fetch(url,{cache:"no-store", mode:"cors"}).then(r=>r.text()).then(txt=>{
-      try{ const j=JSON.parse(txt); if(j.ok){ SWR.set(key, j.data); document.dispatchEvent(new CustomEvent("swr:update",{detail:{key}})); } }
-      catch{ /* ignore */ }
-    }).catch(()=>{ /* ignore */ });
+    fetch(url, { cache:"no-store", mode:"cors", redirect:"follow" })
+      .then(r=>r.text())
+      .then(txt=>{
+        try{
+          const j = JSON.parse(txt);
+          if (j && j.ok) {
+            SWR.set(key, j.data);
+            document.dispatchEvent(new CustomEvent("swr:update", { detail:{ key } }));
+          }
+        }catch{ /* ignore */ }
+      })
+      .catch(()=>{ /* ignore */ });
     return cached;
   }
 
+  // 1) Coba fetch (CORS)
   try{
-    const res=await fetch(url,{cache:"no-store", mode:"cors"});
-    const txt=await res.text(); const j=JSON.parse(txt);
-    if(!j.ok) throw new Error(j.error||"API error");
-    SWR.set(key, j.data); return j.data;
+    const res = await fetch(url, { cache:"no-store", mode:"cors", redirect:"follow" });
+    const txt = await res.text();
+    const j = JSON.parse(txt);
+    if (!j || j.ok === false) throw new Error(j?.error || "API error");
+    SWR.set(key, j.data);
+    return j.data;
   }catch(err){
-    console.warn("GET fell back to JSONP:", err);
+    // 2) Fallback JSONP
+    console.warn("GET -> fallback JSONP:", err?.message || err);
     const data = await jsonp(final.action || params.action || "unknown", final);
-    SWR.set(key, data); return data;
+    SWR.set(key, data);
+    return data;
   }
 }
 
