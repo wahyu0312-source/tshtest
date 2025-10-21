@@ -21,7 +21,6 @@ const PROCESSES = [
 ];
 
 /* ===== Station rules ===== */
-/* ===== Station rules ===== */
 const STATION_RULES = {
   "レザー加工":    (o)=> ({ current_process: "レザー加工" }),
   "曲げ工程":      (o)=> ({ current_process: "曲げ加工" }), // alias
@@ -42,13 +41,12 @@ const STATION_RULES = {
                         ? { current_process:(o.current_process||"検査工程"), status:"出荷済" }
                         : { current_process:"検査工程", status:"出荷準備" }),
 
-  // ⬇️ penambahan label baru
+  // ⬇️ label baru agar tombol QR bisa langsung set status/proses
   "検査中":        (o)=> ({ current_process: "検査中", status: "検査工程" }),
   "検査済":        (o)=> ({ current_process: "検査済", status: "検査済" }),
   "出荷準備":      (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷準備" }),
   "出荷済":        (o)=> ({ current_process: (o.current_process||"検査済"), status: "出荷済" })
 };
-
 
 /* ===== Shortcuts ===== */
 const $     = (s)=> document.querySelector(s);
@@ -66,8 +64,7 @@ const PROC_CLASS = {
   "レザー加工":"prc-laser","曲げ加工":"prc-bend","外枠組立":"prc-frame","シャッター組立":"prc-shassy",
   "シャッター溶接":"prc-shweld","コーキング":"prc-caulk","外枠塗装":"prc-tosou",
   "組立（組立中）":"prc-asm-in","組立（組立済）":"prc-asm-ok","外注":"prc-out",
-
-  "検査工程":"prc-inspect",         // ⬅︎ kembalikan ini
+  "検査工程":"prc-inspect",
   "検査中":"prc-inspecting",
   "検査済":"prc-inspected",
   "出荷準備":"prc-shipready",
@@ -177,6 +174,7 @@ function showApiError(action, err){
   }
   bar.innerHTML=`<b>APIエラー</b> <code>${action||"-"}</code> — ${err.message||err}`;
 }
+
 // ==== Realtime watcher (cek perubahan di server) ====
 let LAST_REV = null;
 function startRealtimeWatcher(){
@@ -195,8 +193,7 @@ function startRealtimeWatcher(){
           const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
           if (shipVisible) renderShipList().catch(()=>{});
           const shippedVisible = !document.getElementById('pageShipped')?.classList.contains('hidden');
-if (shippedVisible) renderShippedList().catch(()=>{});
-
+          if (shippedVisible) renderShippedList().catch(()=>{});
         }
       }
     }catch(_){ /* network hiccup: abaikan */ }
@@ -215,12 +212,10 @@ window.addEventListener('storage', (ev)=>{
     refreshAll(true);
     const shipVisible = !document.getElementById('pageShip')?.classList.contains('hidden');
     if (shipVisible) renderShipList().catch(()=>{});
-
-    const shippedVisible = !document.getElementById('pageShipped')?.classList.contains('hidden'); // ⬅︎ tambah
-    if (shippedVisible) renderShippedList().catch(()=>{});                                        // ⬅︎ tambah
+    const shippedVisible = !document.getElementById('pageShipped')?.classList.contains('hidden');
+    if (shippedVisible) renderShippedList().catch(()=>{});
   }
 });
-
 
 /* ===== Skeleton helpers ===== */
 function tableSkeleton(tbody, rows=7, cols=8){
@@ -267,20 +262,19 @@ async function initWeather(){
       setUI(city, null);
     }
 
-    
-// reverse geocoding (opsional; boleh gagal)
-try {
-  // HINDARI di GitHub Pages biar tidak spam error CORS
-  if (!location.hostname.endsWith("github.io")) {
-    const rev = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`
-    ).then(r => r.json());
-    city = (rev && rev.results && rev.results[0]) 
-      ? (rev.results[0].name || rev.results[0].admin1 || "現在地") 
-      : "現在地";
-    setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
-  }
-} catch (_) { /* ignore */ }
+    // reverse geocoding (opsional; boleh gagal)
+    try {
+      // HINDARI di GitHub Pages biar tidak spam error CORS
+      if (!location.hostname.endsWith("github.io")) {
+        const rev = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`
+        ).then(r => r.json());
+        city = (rev && rev.results && rev.results[0]) 
+          ? (rev.results[0].name || rev.results[0].admin1 || "現在地") 
+          : "現在地";
+        setUI(city, (elTemp && /^\d+/.test(elTemp.textContent)) ? parseInt(elTemp.textContent) : null);
+      }
+    } catch (_) { /* ignore */ }
 
   }catch(e){
     console.warn("weather:", e);
@@ -289,6 +283,12 @@ try {
 }
 
 /* ===== Small utils ===== */
+function parseMultiIds(raw){
+  return String(raw||"")
+    .split(/[\s,;\n\r\t]+/)
+    .map(s=>s.trim())
+    .filter(Boolean);
+}
 function debounce(fn, ms = 150) {
   let t = null;
   return (...args) => {
@@ -315,9 +315,8 @@ window.addEventListener("DOMContentLoaded", ()=>{
     btnToFinPage: ()=> { show("pageFinished"); renderFinished(); },
     btnToInvoice: ()=> show("pageInvoice"),
     btnToCharts:  ()=> { show("pageCharts"); ensureChartsLoaded(); },
-    btnToShipped: ()=> { show("pageShipped"); renderShippedList(); }  // ⟵ baru
+    btnToShipped: ()=> { show("pageShipped"); renderShippedList(); }  // baru
   };
-  
   Object.keys(map).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onclick = map[id];
@@ -329,7 +328,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const miChangePass= $("#miChangePass");
   const btnLogoutMenu = $("#btnLogout");
   if(miStationQR) miStationQR.onclick = openStationQR;
-  if(miAddUser)   miAddUser.onclick   = openAddUserModal; // FIX: cukup sekali, duplikasi dihapus
+  if(miAddUser)   miAddUser.onclick   = openAddUserModal;
   if(miChangePass)miChangePass.onclick= changePasswordUI;
   if(btnLogoutMenu) btnLogoutMenu.onclick= ()=>{ SESSION=null; localStorage.removeItem("erp_session"); location.reload(); };
 
@@ -378,8 +377,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   if(btnPlanDelete)  btnPlanDelete.onclick  = deleteOrderUI;
   if(btnPlanImport)  btnPlanImport.onclick  = ()=> filePlan && filePlan.click();
   if(filePlan)       filePlan.onchange      = (e)=> handleImport(e, "orders");
-const planQ = $("#planQ");
-if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
+  const planQ = $("#planQ");
+  if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
+
   // Ship
   const btnSchedule    = $("#btnSchedule");
   const btnShipExport  = $("#btnShipExport");
@@ -387,7 +387,7 @@ if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
   const btnShipDelete  = $("#btnShipDelete");
   const btnShipByPO    = $("#btnShipByPO");
   const btnShipByID    = $("#btnShipByID");
-  const btnShipImport  = $("#btnShipImport"); // FIX: bracket bug sudah diperbaiki
+  const btnShipImport  = $("#btnShipImport");
   const fileShip       = $("#fileShip");
   if(btnSchedule)   btnSchedule.onclick   = scheduleUI;
   if(btnShipExport) btnShipExport.onclick = exportShipCSV;
@@ -397,30 +397,32 @@ if (planQ) planQ.addEventListener("input", debounce(renderPlanList, 200));
   if(btnShipByID)   btnShipByID.onclick   = ()=>{ const id=prompt("出荷ID:"); if(!id) return; openShipByID(id.trim()); };
   if(btnShipImport) btnShipImport.onclick = ()=> fileShip && fileShip.click();
   if(fileShip)      fileShip.onchange     = (e)=> handleImport(e, "ship").then(()=>renderShipList());
-// ===== Ship List filters =====
-const shipCust = $("#shipCust");
-const shipFrom = $("#shipFrom");
-const shipTo   = $("#shipTo");
-const btnShipReset = $("#btnShipReset");
 
-// set default: hari ini
-const today = new Date();
-const iso = (d)=> new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-if (shipFrom && !shipFrom.value) shipFrom.value = iso(today);
-if (shipTo   && !shipTo.value)   shipTo.value   = iso(today);
+  // ===== Ship List filters =====
+  const shipCust = $("#shipCust");
+  const shipFrom = $("#shipFrom");
+  const shipTo   = $("#shipTo");
+  const btnShipReset = $("#btnShipReset");
 
-const rebakeShip = debounce(()=>renderShipList().catch(()=>{}), 200);
-if (shipCust) shipCust.addEventListener("input", rebakeShip);
-if (shipFrom) shipFrom.addEventListener("change", rebakeShip);
-if (shipTo)   shipTo.addEventListener("change", rebakeShip);
-if (btnShipReset) btnShipReset.onclick = ()=>{
-  if (shipCust) shipCust.value = "";
-  if (shipFrom) shipFrom.value = iso(today);
-  if (shipTo)   shipTo.value   = iso(today);
-  renderShipList().catch(()=>{});
-};
-const shippedQ = $("#shippedQ");
-if (shippedQ) shippedQ.addEventListener("input", debounce(renderShippedList, 200));
+  // set default: hari ini
+  const today = new Date();
+  const iso = (d)=> new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  if (shipFrom && !shipFrom.value) shipFrom.value = iso(today);
+  if (shipTo   && !shipTo.value)   shipTo.value   = iso(today);
+
+  const rebakeShip = debounce(()=>renderShipList().catch(()=>{}), 200);
+  if (shipCust) shipCust.addEventListener("input", rebakeShip);
+  if (shipFrom) shipFrom.addEventListener("change", rebakeShip);
+  if (shipTo)   shipTo.addEventListener("change", rebakeShip);
+  if (btnShipReset) btnShipReset.onclick = ()=>{
+    if (shipCust) shipCust.value = "";
+    if (shipFrom) shipFrom.value = iso(today);
+    if (shipTo)   shipTo.value   = iso(today);
+    renderShipList().catch(()=>{});
+  };
+
+  const shippedQ = $("#shippedQ");
+  if (shippedQ) shippedQ.addEventListener("input", debounce(renderShippedList, 200));
 
   // Invoice
   const btnInvPreview = $("#btnInvPreview");
@@ -468,10 +470,9 @@ if (shippedQ) shippedQ.addEventListener("input", debounce(renderShippedList, 200
   // 注番 source selector (plan)
   initChubanSelector();
 
-     // Weather
-   initWeather();
-   // Realtime refresh
-   startRealtimeWatcher();
+  // Weather & realtime
+  initWeather();
+  startRealtimeWatcher();
 });
 
 /* ===== View helpers ===== */
@@ -574,7 +575,7 @@ async function addUserFromLoginUI(){
   if(!(SESSION.role==="admin"||SESSION.department==="生産技術")) return alert("権限不足（生産技術）");
   const payload={
     username:$("#nuUser")?$("#nuUser").value.trim():"", password:$("#nuPass")?$("#nuPass").value.trim():"",
-    full_name:$("#nuName")?$("#nuName").value.trim():"", department:$("#nuDept")?$("#nuDept").value:"", role:$("#nuRole")?$("#nuRole").value:"member"
+    full_name:$("#nuName")?$("#nuName").value.trim():"", department:=$("#nuDept")?$("#nuDept").value:"", role:=$("#nuRole")?$("#nuRole").value:"member"
   };
   if(!payload.username||!payload.password||!payload.full_name) return alert("必須項目");
   try{ await apiPost("createUser",{user:SESSION,payload}); alert("作成しました"); }
@@ -594,7 +595,7 @@ async function changePasswordUI(){
 /* ===== Masters ===== */
 async function loadMasters(){
   try{
-    const m = await apiGet({action:"masters", types:"得意先,品名,品番,図番,送り先,運送会社"},{swrKey:"masters"});
+    const m = await apiGet({action:"masters", types:"得意先,品名,品番,図番,送り先,運送会社,機種"},{swrKey:"masters"});
     const fill = (sel, arr)=>{ const el=$(sel); if(el) el.innerHTML=(arr||[]).map(v=>`<option value="${v}"></option>`).join(""); };
     fill("#dl_tokui",     m["得意先"]);
     fill("#dl_hinmei",    m["品名"]);
@@ -602,6 +603,7 @@ async function loadMasters(){
     fill("#dl_zuban",     m["図番"]);
     fill("#dl_okurisaki", m["送り先"]);
     fill("#dl_unso",      m["運送会社"]);
+    fill("#dl_kishu",     m["機種"]);
   }catch(e){ console.warn(e); }
 }
 
@@ -635,11 +637,6 @@ async function refreshAll(keep=false){
   }catch(e){ console.error(e); }
 }
 
-/* ===== Orders table / Sales / CRUD / Ship / Invoice / Charts / Import-Export ===== */
-/* (semua bagian ini sama seperti versi sebelumnya; tidak diubah logikanya) */
-/* …(konten lengkap bagian2 lain persis dengan versi yang sudah saya kirim sebelumnya)… */
-
-
 /* ===== Orders table ===== */
 async function listOrders(){
   const qEl=$("#searchQ"); const q = qEl ? qEl.value.trim() : "";
@@ -647,7 +644,7 @@ async function listOrders(){
 }
 async function renderOrders(){
   const tbody=$("#tbOrders"); if(!tbody) return;
-  tableSkeleton(tbody, 7, 9);
+  tableSkeleton(tbody, 7, 10);
   const rows=await listOrders();
   const frag=document.createDocumentFragment();
   rows.forEach(r=>{
@@ -681,6 +678,7 @@ async function renderOrders(){
       <td>${r["品名"]||""}</td>
       <td>${r["品番"]||""}</td>
       <td>${r["図番"]||""}</td>
+      <td>${r["機種"]||""}</td>
       <td class="col-status">${statusBadge}</td>
       <td class="col-proc">${procBadge}</td>
       <td class="s muted">${fmtDT(r.updated_at)}</td>
@@ -691,59 +689,11 @@ async function renderOrders(){
   });
   clearSkeleton(tbody); tbody.appendChild(frag);
 }
-async function renderShipList(){
-  const tbody = $("#tbShipList"); if (!tbody) return;
-  tableSkeleton(tbody, 8, 12);
 
-  const params = { action:"listShipments" };
-  const cust = $("#shipCust")?.value?.trim();
-  const from = $("#shipFrom")?.value;
-  const to   = $("#shipTo")?.value;
-
-  if (cust) params.cust = cust;
-  if (from) params.from = from;
-  if (to)   params.to   = to;
-
-  // ambil data
-  const rows = await apiGet(params, { swrKey: "ship:"+[cust,from,to].join("|") }) || [];
-
-  // sort: hari ini di atas (desc by 出荷日, lalu terbaru)
-  rows.sort((a,b)=>{
-    const ad = new Date(a["出荷日"]||a.ship_date||0).getTime();
-    const bd = new Date(b["出荷日"]||b.ship_date||0).getTime();
-    if (bd !== ad) return bd - ad;
-    const at = new Date(a.updated_at||0).getTime();
-    const bt = new Date(b.updated_at||0).getTime();
-    return bt - at;
-  });
-
-  const fmt = (d)=> d ? new Date(d).toLocaleDateString() : "-";
-
-  const html = rows.map(r=>`
-    <tr>
-      <td class="s">${fmt(r["出荷日"]||r.ship_date)}</td>
-     <td><a class="link" href="javascript:void(0)" onclick="openShipByID('${r["出荷ID"]||r.ship_id||""}')">${r["注番"]||r.po_id||""}</a></td>
-      <td>${r["得意先"]||r.customer||""}</td>
-      <td>${r["品名"]||r.item||""}</td>
-      <td>${r["品番"]||r.part||""}</td>
-      <td>${r["図番"]||r.draw||""}</td>
-      <td>${Number(r["数量"]||r.qty||0)}</td>
-      <td class="s">${fmt(r["納入日"]||r.delivery_date)}</td>
-      <td>${r["送り先"]||r.dest||""}</td>
-      <td>${r["運送会社"]||r.carrier||""}</td>
-      <td class="s">${r["出荷ID"]||r.ship_id||""}</td>
-      <td class="s muted">${fmtDT(r.updated_at)}</td>
-    </tr>
-  `).join("");
-
-  clearSkeleton(tbody);
-  tbody.innerHTML = html;
-}
-
-// ===== Plan list =====
+/* ===== Plan list ===== */
 async function renderPlanList(){
   const tbody = $("#tbPlan"); if(!tbody) return;
-  tableSkeleton(tbody, 8, 8);
+  tableSkeleton(tbody, 8, 9);  // +1 kolom 機種
   const qEl=$("#planQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
   const rows = await apiGet({action:"listOrders", q},{swrKey:"orders"+(q?":"+q:"")});
   const html = (rows||[]).map(r=>{
@@ -751,6 +701,7 @@ async function renderPlanList(){
     return `<tr>
       <td><a href="javascript:void(0)" onclick="openTicket('${r.po_id}')" class="link"><b>${r.po_id}</b></a><div class="row-sub"><span class="muted">得意先:</span> ${r["得意先"]||"-"}</div></td>
       <td>${r["品名"]||""}</td><td>${r["品番"]||""}</td><td>${r["図番"]||""}</td>
+      <td>${r["機種"]||""}</td>
       <td class="s muted">${nyu}</td>
       <td>${r.status||""}</td><td>${r.current_process||""}</td>
       <td class="s muted">${fmtDT(r.updated_at)}</td>
@@ -758,12 +709,13 @@ async function renderPlanList(){
   }).join("");
   clearSkeleton(tbody); tbody.innerHTML = html;
 }
+
+/* ===== Shipped list ===== */
 async function renderShippedList(){
   const tbody = $("#tbShipped"); if(!tbody) return;
-  tableSkeleton(tbody, 8, 8);
+  tableSkeleton(tbody, 8, 9);
 
-  // Prefer: server memfilter status=出荷済.
-  // Jika backend Anda belum ada, fallback client-side dari listOrders().
+  // Prefer: server memfilter status=出荷済. Fallback client-side.
   let rows = [];
   try{
     rows = await apiGet({ action:"listOrders", status:"出荷済" }, { swrKey:"orders:shipped" });
@@ -775,7 +727,6 @@ async function renderShippedList(){
   const qEl = $("#shippedQ");
   let q = qEl ? qEl.value.trim() : "";
   if (q) {
-    const z = q.toLowerCase();
     rows = rows.filter(r =>
       String(r.po_id||"").includes(q) ||
       String(r["得意先"]||"").includes(q) ||
@@ -792,6 +743,7 @@ async function renderShippedList(){
       <td>${r["品名"]||""}</td>
       <td>${r["品番"]||""}</td>
       <td>${r["図番"]||""}</td>
+      <td>${r["機種"]||""}</td>
       <td>${r["数量"]||0}</td>
       <td><span class="badge ${STATUS_CLASS[r.status]||"st-shipped"}">${r.status||""}</span></td>
       <td class="s muted">${fmtDT(r.updated_at)}</td>
@@ -838,20 +790,24 @@ async function saveSalesUI(){
   const qty     = Number($("#so_qty")?.value || 0) || 0;
   const due     = $("#so_due")?.value || $("#so_req")?.value || "";
   const note    = $("#so_note")?.value || "";
-  const status  = $("#so_status")?.value || "";            // FIX
-  const linked  = $("#so_linked_po")?.value?.trim?.() || "";// FIX
+  const status  = $("#so_status")?.value || "";
+  const kishu   = $("#so_kishu")?.value.trim() || "";
+  const linked0 = $("#so_linked_po")?.value?.trim?.() || "";
+  const linkedList = parseMultiIds(linked0);
 
   const payload = {
     "受注日": recv, "得意先": cust, "品名": item, "品番": part, "図番": drw,
-    "製番号": sei, "数量": qty, "希望納期": due, "備考": note, status, "linked_po_id": linked
+    "製番号": sei, "数量": qty, "希望納期": due, "備考": note, status,
+    "linked_po_id": linkedList.join(","),   // multi 注番
+    "機種": kishu
   };
 
   try{
     if(so_id){
-      await apiPost("updateSalesOrder", { so_id, updates: payload, user: SESSION }); // FIX
+      await apiPost("updateSalesOrder", { so_id, updates: payload, user: SESSION });
       alert("営業データを更新しました");
     }else{
-      const r = await apiPost("createSalesOrder", { payload, user: SESSION });       // FIX
+      const r = await apiPost("createSalesOrder", { payload, user: SESSION });
       alert("営業データを作成: " + (r.so_id || ""));
       if($("#so_id")) $("#so_id").value = r.so_id || "";
     }
@@ -868,7 +824,7 @@ async function deleteSalesUI(){
   if(!so_id) return;
   if(!confirm("削除しますか？")) return;
   try{
-    const r = await apiPost("deleteSalesOrder", { so_id, user: SESSION });           // FIX
+    const r = await apiPost("deleteSalesOrder", { so_id, user: SESSION });
     alert("削除: " + (r.deleted || so_id));
     if($("#so_id")) $("#so_id").value = "";
     await renderSales();
@@ -883,7 +839,7 @@ async function promoteSalesUI(){
   const so_id = $("#so_id")?.value.trim() || prompt("受注番号（SO）:");
   if(!so_id) return;
   try{
-    const r = await apiPost("promoteSalesToPlan", { so_id, user: SESSION });         // FIX
+    const r = await apiPost("promoteSalesToPlan", { so_id, user: SESSION });
     alert(`注番へ昇格しました: SO=${so_id} → PO=${r.po_id||"(不明)"}`);
     await refreshAll(true);
     await populateChubanFromSales();
@@ -930,22 +886,31 @@ async function createOrderUI(){
     "品名"  : ($("#c_hinmei")?.value || "").trim(),
     "品番"  : ($("#c_hinban")?.value || "").trim(),
     "図番"  : ($("#c_zuban")?.value || "").trim(),
+    "機種"  : ($("#c_kishu")?.value || "").trim(),
     "数量"  : Number($("#c_qty")?.value || 0) || 0,
     "投入日": ($("#c_nyu")?.value || "")
   };
+
   const editingPoEl = $("#c_po");
-  const editingPo = editingPoEl ? editingPoEl.value.trim() : "";
+  const editingPo   = editingPoEl ? editingPoEl.value.trim() : "";
+  const rawPO       = $("#c_po")?.value.trim() || "";
+  const poList      = parseMultiIds(rawPO);
+
   try{
     if (editingPo){
       await apiPost("updateOrder", { po_id: editingPo, updates: p, user: SESSION });
       alert("編集保存しました");
+    } else if (poList.length > 1){
+      for (const _ of poList){
+        await apiPost("createOrder", { payload: { ...p, "数量": 1 }, user: SESSION });
+      }
+      alert(`作成：${poList.length}件（複数注番）`);
     } else {
       const r = await apiPost("createOrder", { payload: p, user: SESSION });
       alert("作成: " + r.po_id);
       if (editingPoEl) editingPoEl.value = r.po_id;
     }
-    refreshAll();
-    renderPlanList().catch(()=>{});
+    refreshAll(); renderPlanList().catch(()=>{});
   }catch(e){ alert(e.message || e); }
 }
 async function loadOrderForEdit(){
@@ -959,9 +924,9 @@ async function loadOrderForEdit(){
     set("#c_hinmei",o["品名"]);
     set("#c_hinban",o["品番"]);
     set("#c_zuban", o["図番"]);
+    set("#c_kishu", o["機種"]);        // NEW
     set("#c_qty",   o["数量"] || 0);
     set("#c_nyu",  o["投入日"] ? String(o["投入日"]).slice(0,10) : "");
-
     alert("読み込み完了。");
   }catch(e){ alert(e.message || e); }
 }
@@ -984,16 +949,17 @@ async function scheduleUI(){
   if(!(SESSION && (SESSION.role==="admin"||SESSION.department==="生産技術"||SESSION.department==="生産管理部")))
     return alert("権限不足");
 
-  const po   = $("#s_po")?.value.trim() || "";
-  const sdate= $("#s_date")?.value || "";
-  const ddate= $("#s_delivery")?.value || "";
-  const qty  = Number($("#s_qty")?.value || 0) || 0;
+  const po     = $("#s_po")?.value.trim() || "";
+  const poList = parseMultiIds(po);
+  const sdate  = $("#s_date")?.value || "";
+  const ddate  = $("#s_delivery")?.value || "";
+  const qty    = Number($("#s_qty")?.value || 0) || 0;
 
   const cust = $("#s_cust")?.value.trim() || "";
   const item = $("#s_item")?.value.trim() || "";
   const part = $("#s_part")?.value.trim() || "";
   const drw  = $("#s_drw")?.value.trim()  || "";
-
+  const kishu= $("#s_kishu")?.value.trim()|| "";
   const dest = $("#s_dest")?.value.trim() || "";
   const unso = $("#s_carrier")?.value.trim() || "";
 
@@ -1008,18 +974,20 @@ async function scheduleUI(){
         ship_id: shipId,
         updates:{
           po_id:po, scheduled_date:sdate, delivery_date:ddate, qty,
-          得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso
+          得意先:cust, 品名:item, 品番:part, 図番:drw, 送り先:dest, 運送会社:unso, 機種:kishu
         },
         user: SESSION
       });
       alert("出荷予定を編集しました");
       broadcastDataChange('ship');
     } else {
-      const r = await apiPost("scheduleShipment",{
-        po_id:po, dateIso:sdate, deliveryIso:ddate, qty,
-        customer:cust, item, part, drw, dest, carrier:unso, user:SESSION
-      });
-      alert("登録: " + r.ship_id);
+      for (const one of (poList.length ? poList : [po])) {
+        await apiPost("scheduleShipment",{
+          po_id: one, dateIso:sdate, deliveryIso:ddate, qty,
+          customer:cust, item, part, drw, dest, carrier:unso, kishu, user:SESSION
+        });
+      }
+      alert(`登録: 出荷予定 × ${poList.length||1}`);
       broadcastDataChange('ship');
     }
     refreshAll(true);
@@ -1052,14 +1020,13 @@ async function deleteShipUI(){
   try{
     const r = await apiPost("deleteShipment",{ship_id:sid,user:SESSION});
     alert("削除:"+r.deleted);
-    broadcastDataChange('ship');       // (opsional) sinkron tab lain
+    broadcastDataChange('ship');       // sinkron tab lain
     refreshAll(true);
     renderShipList().catch(()=>{});
   }catch(e){
     alert(e.message||e);
   }
 }
-
 
 async function openShipByPO(po){
   try{
@@ -1109,7 +1076,7 @@ async function openHistory(po_id){
   try{
     const data=await apiGet({action:"history",po_id});
     const rows=(data||[]).map(x=>`
-      <div class="row s" style="gap=.5rem;border-bottom:1px solid var(--border);padding:.25rem 0">
+      <div class="row s" style="gap:.5rem;border-bottom:1px solid var(--border);padding:.25rem 0">
         <span class="muted">${fmtDT(x.timestamp)}</span>
         <span>${x.updated_by||""}</span>
         <span class="badge ${STATUS_CLASS[x.new_status]||"st-begin"}">${x.prev_status||""} → ${x.new_status||""}</span>
@@ -1212,15 +1179,14 @@ async function initScan(){
           const ok = Number($("#man_ok")?$("#man_ok").value:"")||0;
           const ng = Number($("#man_ng")?$("#man_ng").value:"")||0;
           try{
-           const o = await apiGet({ action:"ticket", po_id: CURRENT_PO });
-const rule = STATION_RULES[station] || (_o => ({ current_process: station }));
-const updates = Object.assign({ ok_qty: ok, ng_qty: ng }, rule(o) || {});
-
-await apiPost("updateOrder", { po_id: CURRENT_PO, updates, user: SESSION });
-broadcastDataChange('orders');
-alert("更新しました");
-refreshAll(true);
- }catch(e){ alert(e.message||e); }
+            const o = await apiGet({ action:"ticket", po_id: CURRENT_PO });
+            const rule = STATION_RULES[station] || (_o => ({ current_process: station }));
+            const updates = Object.assign({ ok_qty: ok, ng_qty: ng }, rule(o) || {});
+            await apiPost("updateOrder", { po_id: CURRENT_PO, updates, user: SESSION });
+            broadcastDataChange('orders');
+            alert("更新しました");
+            refreshAll(true);
+          }catch(e){ alert(e.message||e); }
         }
         stopScan();
         $("#dlgScan").close();
@@ -1236,7 +1202,7 @@ function stopScan(){
 /* ===== Inventory & Finished ===== */
 async function renderInventory(){
   const tbody=$("#tbInv"); if(!tbody) return;
-  tableSkeleton(tbody, 8, 8);
+  tableSkeleton(tbody, 8, 9);
   const qEl=$("#invQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
   const rows=await apiGet({action:"listInventory",q},{swrKey:"inv"+(q?":"+q:"")});
   tbody.innerHTML = rows.map(r=> `
@@ -1252,6 +1218,7 @@ async function renderInventory(){
       <td>${r["品名"]||""}</td>
       <td>${r["品番"]||""}</td>
       <td>${r["図番"]||""}</td>
+      <td>${r["機種"]||""}</td>
       <td><span class="badge ${STATUS_CLASS[r.status]||"st-begin"}">${r.status||""}</span></td>
       <td><span class="badge ${PROC_CLASS[r.current_process]||"prc-out"}">${r.current_process||""}</span></td>
       <td class="s muted">${fmtDT(r.updated_at)}</td>
@@ -1260,7 +1227,7 @@ async function renderInventory(){
 }
 async function renderFinished(){
   const tbody=$("#tbFin"); if(!tbody) return;
-  tableSkeleton(tbody, 8, 8);
+  tableSkeleton(tbody, 8, 9);
   const qEl=$("#finQ"); const q=(qEl&&qEl.value)? qEl.value.trim():"";
   const rows=await apiGet({action:"listFinished",q},{swrKey:"fin"+(q?":"+q:"")});
   tbody.innerHTML = rows.map(r=> `
@@ -1276,11 +1243,63 @@ async function renderFinished(){
       <td>${r["品名"]||""}</td>
       <td>${r["品番"]||""}</td>
       <td>${r["図番"]||""}</td>
+      <td>${r["機種"]||""}</td>
       <td><span class="badge ${STATUS_CLASS[r.status]||"st-begin"}">${r.status||""}</span></td>
       <td><span class="badge ${PROC_CLASS[r.current_process]||"prc-out"}">${r.current_process||""}</span></td>
       <td class="s muted">${fmtDT(r.updated_at)}</td>
       <td class="s muted">${r.updated_by||""}</td>
     </tr>`).join("");
+}
+
+/* ===== Ship List (table) ===== */
+async function renderShipList(){
+  const tbody = $("#tbShipList"); if (!tbody) return;
+  tableSkeleton(tbody, 8, 12);
+
+  const params = { action:"listShipments" };
+  const cust = $("#shipCust")?.value?.trim();
+  const from = $("#shipFrom")?.value;
+  const to   = $("#shipTo")?.value;
+
+  if (cust) params.cust = cust;
+  if (from) params.from = from;
+  if (to)   params.to   = to;
+
+  // ambil data
+  const rows = await apiGet(params, { swrKey: "ship:"+[cust,from,to].join("|") }) || [];
+
+  // sort: hari ini di atas (desc by 出荷日, lalu terbaru)
+  rows.sort((a,b)=>{
+    const ad = new Date(a["出荷日"]||a.ship_date||0).getTime();
+    const bd = new Date(b["出荷日"]||b.ship_date||0).getTime();
+    if (bd !== ad) return bd - ad;
+    const at = new Date(a.updated_at||0).getTime();
+    const bt = new Date(b.updated_at||0).getTime();
+    return bt - at;
+  });
+
+  const fmt = (d)=> d ? new Date(d).toLocaleDateString() : "-";
+
+  const html = rows.map(r=>`
+    <tr>
+      <td class="s">${fmt(r["出荷日"]||r.ship_date)}</td>
+      <td><a class="link" href="javascript:void(0)" onclick="openShipByID('${r["出荷ID"]||r.ship_id||""}')">${r["注番"]||r.po_id||""}</a></td>
+      <td>${r["得意先"]||r.customer||""}</td>
+      <td>${r["品名"]||r.item||""}</td>
+      <td>${r["品番"]||r.part||""}</td>
+      <td>${r["図番"]||r.draw||""}</td>
+      <td>${r["機種"]||r.kishu||""}</td>
+      <td>${Number(r["数量"]||r.qty||0)}</td>
+      <td class="s">${fmt(r["納入日"]||r.delivery_date)}</td>
+      <td>${r["送り先"]||r.dest||""}</td>
+      <td>${r["運送会社"]||r.carrier||""}</td>
+      <td class="s">${r["出荷ID"]||r.ship_id||""}</td>
+      <td class="s muted">${fmtDT(r.updated_at)}</td>
+    </tr>
+  `).join("");
+
+  clearSkeleton(tbody);
+  tbody.innerHTML = html;
 }
 
 /* ===== Invoice ===== */
@@ -1291,14 +1310,27 @@ async function previewInvoiceUI(){
     to:   $("#inv_to")?$("#inv_to").value:"",
   };
   if(!info.from||!info.to) return alert("期間（自/至）を入力");
+
   try{
-    const d=await apiGet({action:"previewInvoice",customer:info.customer,from:info.from,to:info.to});
+    const d = await apiGet({action:"previewInvoice",customer:info.customer,from:info.from,to:info.to});
     INV_PREVIEW.info = {
       得意先: d.info.得意先, 期間自: d.info.期間自, 期間至: d.info.期間至,
       請求日: $("#inv_date")?($("#inv_date").value || new Date().toISOString().slice(0,10)) : new Date(),
       通貨: $("#inv_currency")?$("#inv_currency").value:"JPY", メモ: $("#inv_memo")?$("#inv_memo").value:""
     };
-    INV_PREVIEW.lines = d.lines.map(l=> ({...l, 単価: l.単価||0, 金額: (l.数量||0)*(l.単価||0)}));
+
+    const poFilter = parseMultiIds($("#inv_pos")?.value||"");
+    let lines = (d.lines||[]).map(l=> ({...l, 単価: l.単価||0, 金額: (l.数量||0)*(l.単価||0)}));
+
+    if (poFilter.length){
+      const set = new Set(poFilter);
+      lines = lines.filter(l=>{
+        const po = l.PO || l.POs || l.注番 || "";
+        return String(po).split(/[,\s]+/).some(x=> set.has(x));
+      });
+    }
+
+    INV_PREVIEW.lines = lines;
     renderInvoiceLines();
   }catch(e){ alert(e.message||e); }
 }
@@ -1309,7 +1341,10 @@ function renderInvoiceLines(){
     const amount = Number(l.数量||0)*Number(l.単価||0); sub+=amount;
     return `<tr>
       <td>${i+1}</td>
-      <td>${l.品名||""}</td><td>${l.品番||""}</td><td>${l.図番||""}</td>
+      <td>${l.品名||""}</td>
+      <td>${l.品番||""}</td>
+      <td>${l.図番||""}</td>
+      <td>${l.機種||l["機種"]||""}</td>
       <td>${l.数量||0}</td>
       <td contenteditable oninput="onInvPriceChange(${i}, this.innerText)">${l.単価||0}</td>
       <td>${amount}</td>
