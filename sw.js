@@ -8,7 +8,7 @@ const ASSET_CACHE  = `${SW_VERSION}-assets`;
 const API_CACHE    = `${SW_VERSION}-api`;   // reserved (tidak dipakai skrg)
 
 // Samakan versi dengan yang di index.html ?v=...
-const APP_JS_VERSION = '2025-10-21-03';
+const APP_JS_VERSION = '2025-10-21-03-2'; // <-- ganti angka/akhiran
 
 // Precache hanya aset same-origin yang pasti ada
 const CORE_ASSETS = [
