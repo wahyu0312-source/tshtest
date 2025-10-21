@@ -1632,6 +1632,7 @@ function applyBackground(hex){
 })();
 
 /* ===== Mobile Burger / Drawer ===================================== */
+/* ===== Mobile Burger / Drawer ===================================== */
 (() => {
   const nav = document.getElementById('mobileNav');
   const btn = document.getElementById('btnBurger');
@@ -1690,64 +1691,6 @@ function applyBackground(hex){
   });
 })();
 
-
-  function openNav(){
-    nav.hidden = false;
-    // next frame biar transition jalan
-    requestAnimationFrame(()=> nav.classList.add('open'));
-    btn.setAttribute('aria-expanded','true');
-    // Lock scroll body
-    document.documentElement.style.overflow = 'hidden';
-  }
-  function closeNav(){
-    nav.classList.remove('open');
-    btn.setAttribute('aria-expanded','false');
-    document.documentElement.style.overflow = '';
-    // hide setelah animasi
-    setTimeout(()=>{ nav.hidden = true; }, 220);
-  }
-  function toggle(){ (nav.hidden || !nav.classList.contains('open')) ? openNav() : closeNav(); }
-
-  btn.addEventListener('click', toggle, {passive:true});
-    nav.addEventListener('click', (e)=>{
-    const t = e.target;
-
-    // tutup?
-    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); return; }
-
-    // navigasi ke halaman (mirror tombol topbar)
-    const go = t && t.closest('[data-go]');
-    if (go){
-      const id = go.getAttribute('data-go');
-      const realBtn = document.getElementById(id);
-      if (realBtn) realBtn.click();
-      closeNav();
-      return;
-    }
-
-    // actions di 設定
-    const act = t && t.closest('[data-act]');
-    if (act){
-      const m = act.getAttribute('data-act');
-      if (m==='stationQR') openStationQR();
-      if (m==='addUser')   openAddUserModal();
-      if (m==='changePass') changePasswordUI();
-      if (m==='theme'){ document.getElementById('miTheme')?.click(); }
-      if (m==='logout'){ SESSION=null; localStorage.removeItem('erp_session'); location.reload(); }
-      closeNav();
-      return;
-    }
-  }, {passive:true});
-
-
-  // ESC to close
-  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && nav.classList.contains('open')) closeNav(); });
-
-  // Auto-disable saat landscape/desktop
-  window.addEventListener('resize', ()=>{
-    if (window.innerWidth >= 1024 && !nav.hidden) closeNav();
-  });
-})();
 
 /* ===== Service Worker register ===== */
 if ("serviceWorker" in navigator) {
