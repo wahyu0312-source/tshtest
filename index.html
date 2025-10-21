@@ -36,6 +36,13 @@
   <!-- NAV -->
   <nav class="nav">
     <div class="nav-left">
+      <!-- ⬇️ Tepat setelah <div class="nav-left">...</div> -->
+<button id="btnBurger" class="burger" aria-label="Menu" aria-expanded="false">
+  <span></span><span></span><span></span>
+</button>
+
+<!-- …biarkan elemen lain apa adanya… -->
+
       <img src="assets/tsh.png" class="logo" alt="">
       <span class="brand">東京精密発條株式会社システム</span>
     </div>
@@ -68,6 +75,9 @@
           <button id="miAddUser" class="menu-item"><i class="fa-solid fa-user-plus"></i> ユーザー追加</button><!-- FIX: admin-only via JS -->
           <button id="miChangePass" class="menu-item"><i class="fa-solid fa-key"></i> パス変更</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:.35rem 0">
+          <!-- Di dalam <div class="menu right"> pada 設定 -->
+<button id="miTheme" class="menu-item"><i class="fa-solid fa-palette"></i> 背景色</button>
+
           <button id="btnLogout" class="menu-item"><i class="fa-solid fa-right-from-bracket"></i> ログアウト</button>
         </div>
       </details>
@@ -506,5 +516,17 @@
   <dialog id="dlgHistory" class="paper"><div class="body"><h3>更新履歴</h3><div id="histBody"></div></div><footer class="row-end"><button class="btn" onclick="document.getElementById('dlgHistory').close()">閉じる</button></footer></dialog>
   <dialog id="dlgTicket"  class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgTicket').close()">閉じる</button></footer></dialog>
   <dialog id="dlgShip"    class="paper"><div class="body"></div><footer class="row-end"><button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> 印刷</button><button class="btn" onclick="document.getElementById('dlgShip').close()">閉じる</button></footer></dialog>
+<!-- Theme Picker -->
+<dialog id="dlgTheme" class="paper" style="max-width:520px">
+  <div class="body">
+    <h3>背景色（テーマ）</h3>
+    <p class="muted s">choice clour</p>
+    <div id="themeGrid" class="theme-grid"></div>
+  </div>
+  <footer class="row-end">
+    <button class="btn" onclick="document.getElementById('dlgTheme').close()">閉じる</button>
+  </footer>
+</dialog>
+
 </body>
 </html>
