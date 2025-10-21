@@ -444,3 +444,75 @@ html,body{background:var(--bg); color:var(--text);}
 .theme-dot{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
 .theme-name{font-size:.9rem}
 .theme-swatch:focus-visible{outline:2px solid #60a5fa; outline-offset:2px}
+/* ---------- Kontras global yang lebih tegas ---------- */
+:root{
+  --text-strong: #0f172a;       /* judul/konten utama */
+  --text:        #1f2937;       /* isi */
+  --muted:       #475569;       /* teks muted */
+}
+
+:root[data-theme="dark"]{
+  --text-strong: #e6eef7;
+  --text:        #dbe2ee;
+  --muted:       #a6b0c3;
+}
+
+/* Pakai di semua judul/konten penting */
+.h, .row-main b, .card h3, .table th { color: var(--text-strong); }
+.muted { color: var(--muted); }
+
+/* ---------- Chip proses di dashboard ---------- */
+.grid-chip{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.75rem; padding:.6rem .8rem;
+  border-radius:12px;
+  border:1px solid var(--chip-border, #cbd5e1);
+  background: var(--chip-bg, #eef2ff);
+  color: var(--chip-text, var(--text-strong));
+  box-shadow: 0 1px 0 rgba(15,23,42,.04), 0 2px 8px rgba(2,6,23,.04);
+  font-weight:600;
+}
+.grid-chip .muted{ color: var(--muted); font-weight:600; }
+.grid-chip .h{ font-size:18px; font-weight:700; }
+
+/* Warna yang aman (WCAG ~AA) untuk variasi chip */
+.prc-laser    { --chip-bg:#e0e7ff; --chip-border:#c7d2fe; --chip-text:#0b1220; }
+.prc-bend     { --chip-bg:#dbeafe; --chip-border:#bfdbfe; --chip-text:#0b1220; }
+.prc-frame    { --chip-bg:#e2e8f0; --chip-border:#cbd5e1; --chip-text:#0b1220; }
+.prc-shassy   { --chip-bg:#fee2e2; --chip-border:#fecaca; --chip-text:#111827; }
+.prc-shweld   { --chip-bg:#fde68a; --chip-border:#fcd34d; --chip-text:#0b1220; }
+.prc-caulk    { --chip-bg:#fae8ff; --chip-border:#f5d0fe; --chip-text:#111827; }
+.prc-tosou    { --chip-bg:#cffafe; --chip-border:#a5f3fc; --chip-text:#0b1220; }
+.prc-asm-in   { --chip-bg:#e9d5ff; --chip-border:#d8b4fe; --chip-text:#0b1220; }
+.prc-asm-ok   { --chip-bg:#dcfce7; --chip-border:#bbf7d0; --chip-text:#064e3b; }
+.prc-out      { --chip-bg:#f1f5f9; --chip-border:#e2e8f0; --chip-text:#0b1220; }
+.prc-inspect  { --chip-bg:#ffe4e6; --chip-border:#fecdd3; --chip-text:#0b1220; }
+.prc-inspecting{--chip-bg:#fde68a; --chip-border:#fcd34d; --chip-text:#0b1220; }
+.prc-inspected{ --chip-bg:#dcfce7; --chip-border:#bbf7d0; --chip-text:#064e3b; }
+.prc-shipready{ --chip-bg:#fef3c7; --chip-border:#fde68a; --chip-text:#0b1220; }
+.prc-shipped  { --chip-bg:#e2e8f0; --chip-border:#cbd5e1; --chip-text:#0b1220; }
+
+/* ---------- Badge status (pil kecil) ---------- */
+.badge{
+  --pill-bg:#e5e7eb; --pill-border:#cbd5e1; --pill-text:#111827;
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.26rem .55rem; border-radius:999px; border:1px solid var(--pill-border);
+  background:var(--pill-bg); color:var(--pill-text); font-weight:650;
+}
+.badge .dot{ width:.42rem; height:.42rem; border-radius:99px; background:currentColor; opacity:.8; }
+
+/* Status aman kontras */
+.st-begin   { --pill-bg:#e5e7eb; --pill-border:#cbd5e1; --pill-text:#111827; }
+.st-inspect { --pill-bg:#dbeafe; --pill-border:#93c5fd; --pill-text:#0b1220; }
+.st-hold    { --pill-bg:#fee2e2; --pill-border:#fecaca; --pill-text:#991b1b; }
+.st-ready   { --pill-bg:#fef3c7; --pill-border:#fde68a; --pill-text:#92400e; }
+.st-shipped { --pill-bg:#dcfce7; --pill-border:#bbf7d0; --pill-text:#065f46; }
+.st-ng      { --pill-bg:#fee2e2; --pill-border:#fecaca; --pill-text:#b91c1c; }
+
+/* ---------- Biar tetap kebaca di layar kecil ---------- */
+@media (max-width: 768px){
+  .grid-chip{ padding:.55rem .7rem; }
+  .grid-chip .h{ font-size:16px; }
+  .badge{ font-size:.9rem; }
+  #gridProc{ gap:.5rem; }
+}
