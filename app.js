@@ -1615,35 +1615,27 @@ function applyBackground(hex){
 
   function openNav() {
     nav.hidden = false;
-    requestAnimationFrame(() => nav.classList.add('open')); // biar animasi jalan
+    requestAnimationFrame(() => nav.classList.add('open'));
     btn.setAttribute('aria-expanded', 'true');
-    document.documentElement.style.overflow = 'hidden';      // lock scroll
+    document.documentElement.style.overflow = 'hidden';
   }
-
   function closeNav() {
     nav.classList.remove('open');
     btn.setAttribute('aria-expanded', 'false');
     document.documentElement.style.overflow = '';
-    setTimeout(() => { nav.hidden = true; }, 220);           // setelah animasi
+    setTimeout(() => { nav.hidden = true; }, 220);
   }
-
   function toggle() {
     (nav.hidden || !nav.classList.contains('open')) ? openNav() : closeNav();
   }
 
   btn.addEventListener('click', toggle, { passive: true });
 
-  // Klik di dalam drawer
   nav.addEventListener('click', (e) => {
     const t = e.target;
 
-    // Tutup bila klik elemen yang bertanda data-close
-    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) {
-      closeNav(); 
-      return;
-    }
+    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); return; }
 
-    // Navigasi: mirror tombol topbar, pakai id di data-go
     const go = t && t.closest('[data-go]');
     if (go) {
       const id = go.getAttribute('data-go');
@@ -1653,7 +1645,6 @@ function applyBackground(hex){
       return;
     }
 
-    // Actions di 設定
     const act = t && t.closest('[data-act]');
     if (act) {
       const m = act.getAttribute('data-act');
@@ -1667,16 +1658,14 @@ function applyBackground(hex){
     }
   }, { passive: true });
 
-  // ESC untuk menutup
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && nav.classList.contains('open')) closeNav();
   });
-
-  // Otomatis tutup saat lebar desktop
   window.addEventListener('resize', () => {
     if (window.innerWidth >= 1024 && !nav.hidden) closeNav();
   });
 })();
+
 
   function openNav(){
     nav.hidden = false;
