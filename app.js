@@ -78,18 +78,22 @@ const SWR = {
 };
 
 /* ===== API helpers (CORS-safe + JSONP fallback) ===== */
+/* ===== API helpers (CORS-safe + JSONP fallback) ===== */
 function toQS(obj){
-  return Object.keys(obj||{}).map(k => encodeURIComponent(k)+"="+encodeURIComponent(obj[k]??"")).join("&");
+  return Object.keys(obj||{}).map(k =>
+    encodeURIComponent(k) + "=" + encodeURIComponent(obj[k] ?? "")
+  ).join("&");
 }
+
 function jsonp(action, params = {}){
   return new Promise((resolve, reject)=>{
-    const cb = "__jp" + Date.now() + Math.floor(Math.random()*1e6);
-    const q  = { action, ...params, callback: cb, jsonp: 1, _: Date.now() }; // cache-bust
+    const cb  = "__jp" + Date.now() + Math.floor(Math.random()*1e6);
+    const q   = { action, ...params, callback: cb, jsonp: 1, _: Date.now() };
     const url = resolveApiBase() + "?" + toQS(q);
 
     const s = document.createElement("script");
     let done = false;
-    const timer = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, 15000);
+    const timer = setTimeout(()=>{ cleanup(); reject(new Error("JSONP timeout")); }, 15000);
 
     function cleanup(){
       if(done) return;
@@ -117,14 +121,38 @@ function jsonp(action, params = {}){
   });
 }
 
-apiGet
+/* --- POST with fetch, fallback JSONP --- */
+async function apiPost(action, body){
+  const payload = { action, ...(API_KEY ? { apiKey: API_KEY } : {}), ...body };
+  try{
+    const res = await fetch(resolveApiBase(), {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: toQS(payload),
+      cache: "no-store",
+      redirect: "follow"
+    });
+    const txt = await res.text();
+    const j = JSON.parse(txt);
+    if (!j || j.ok === false) throw new Error(j?.error || "API error");
+    if (j.data == null) throw new Error("Empty server data");
+    return j.data;
+  }catch(err){
+    console.warn("POST -> fallback JSONP:", err?.message || err);
+    const data = await jsonp(action, payload);
+    if (!data) throw new Error("Empty server data");
+    return data;
+  }
+}
 
+/* --- GET with fetch, fallback JSONP (SWR cache) --- */
 async function apiGet(params, {swrKey=null, revalidate=true} = {}){
   const final = { ...params, ...(API_KEY ? { apiKey: API_KEY } : {}) };
   const url   = resolveApiBase() + "?" + new URLSearchParams(final).toString();
   const key   = swrKey || ("GET:" + url);
 
-  // SWR: serve cache dulu (kalau ada), sambil revalidate di belakang
+  // Serve cache dulu + revalidate di belakang
   const cached = SWR.get(key);
   if (cached && revalidate){
     fetch(url, { cache:"no-store", mode:"cors", redirect:"follow" })
@@ -136,13 +164,13 @@ async function apiGet(params, {swrKey=null, revalidate=true} = {}){
             SWR.set(key, j.data);
             document.dispatchEvent(new CustomEvent("swr:update", { detail:{ key } }));
           }
-        }catch{ /* ignore */ }
+        }catch{}
       })
-      .catch(()=>{ /* ignore */ });
+      .catch(()=>{});
     return cached;
   }
 
-  // 1) Coba fetch (CORS)
+  // Coba fetch normal
   try{
     const res = await fetch(url, { cache:"no-store", mode:"cors", redirect:"follow" });
     const txt = await res.text();
@@ -151,13 +179,14 @@ async function apiGet(params, {swrKey=null, revalidate=true} = {}){
     SWR.set(key, j.data);
     return j.data;
   }catch(err){
-    // 2) Fallback JSONP
+    // Fallback JSONP
     console.warn("GET -> fallback JSONP:", err?.message || err);
     const data = await jsonp(final.action || params.action || "unknown", final);
     SWR.set(key, data);
     return data;
   }
 }
+
 
 function showApiError(action, err){
   console.error("API FAIL:", action, err);
