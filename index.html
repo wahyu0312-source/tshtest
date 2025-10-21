@@ -106,8 +106,9 @@
         <table class="table s">
           <thead>
           <tr>
-            <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th>
-          </tr>
+  <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>状態</th><th>工程</th><th>更新日時</th><th>更新者</th><th>操作</th>
+</tr>
           </thead>
           <tbody id="tbOrders"></tbody>
         </table>
@@ -170,6 +171,7 @@
         <input id="so_part" placeholder="品番" list="dl_hinban">
         <input id="so_note" placeholder="備考">
         <input id="so_item" placeholder="品名" list="dl_hinmei">
+        <input id="so_kishu" placeholder="機種" list="dl_kishu">
         <input id="so_qty" type="number" inputmode="numeric" pattern="\d*" placeholder="数量"><!-- FIX: keyboard numerik -->
         <input id="so_linked_po" placeholder="関連注番（PO）">
       </div>
@@ -183,7 +185,7 @@
       <div class="table-wrap">
         <table class="table s">
           <thead>
-            <tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr>
+            <tr><th>受注番号</th><th>受注日</th><th>得意先</th><th>品名</th><th>品番/図番</th><th>機種</th><th>数量</th><th>希望納期</th><th>状態</th><th>関連注番</th><th>更新</th></tr>
           </thead>
           <tbody id="tbSales"></tbody>
         </table>
@@ -215,11 +217,13 @@
           </select>
           <input id="c_po" placeholder="注番（編集用）" list="dl_po_from_so">
           <datalist id="dl_po_from_so"></datalist>
+          
         </div>
 
         <input id="c_tokui" placeholder="得意先" list="dl_tokui">
         <input id="c_sei" placeholder="製番号">
         <input id="c_hinmei" placeholder="品名" list="dl_hinmei">
+        <input id="c_kishu" placeholder="機種" list="dl_kishu">
         <input id="c_hinban" placeholder="品番" list="dl_hinban">
         <input id="c_zuban" placeholder="図番" list="dl_zuban">
         <input id="c_qty" type="number" min="0" placeholder="数量">
@@ -237,6 +241,7 @@
       <datalist id="dl_hinmei"></datalist>
       <datalist id="dl_hinban"></datalist>
       <datalist id="dl_zuban"></datalist>
+      <datalist id="dl_kishu"></datalist>
     </section>
     <section class="card">
   <header class="row-between">
@@ -246,10 +251,10 @@
   <div class="table-wrap">
     <table class="table s">
       <thead>
-        <tr>
-          <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th>
-          <th>投入日</th><th>状態</th><th>工程</th><th>更新</th>
-        </tr>
+       <tr>
+  <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>投入日</th><th>状態</th><th>工程</th><th>更新</th>
+</tr>
       </thead>
       <tbody id="tbPlan"></tbody>
     </table>
@@ -280,6 +285,7 @@
         <div class="labeled"><label for="s_date">出荷日</label><input id="s_date" type="date"></div>
         <input id="s_cust" placeholder="得意先" list="dl_tokui">
         <input id="s_item" placeholder="品名" list="dl_hinmei">
+        <input id="s_kishu" placeholder="機種" list="dl_kishu">
         <input id="s_dest" placeholder="送り先" list="dl_okurisaki">
         <input id="s_shipid" placeholder="出荷ID（編集/削除用）">
         <!-- 右 -->
@@ -313,10 +319,10 @@
     <table class="table s">
       <thead>
         <tr>
-          <th>出荷日</th><th>注番</th><th>得意先</th><th>品名</th>
-          <th>品番</th><th>図番</th><th>数量</th><th>納入日</th>
-          <th>送り先</th><th>運送会社</th><th>出荷ID</th><th>更新</th>
-        </tr>
+  <th>出荷日</th><th>注番</th><th>得意先</th><th>品名</th>
+  <th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>数量</th><th>納入日</th><th>送り先</th><th>運送会社</th><th>出荷ID</th><th>更新</th>
+</tr>
       </thead>
       <tbody id="tbShipList"></tbody>
     </table>
@@ -334,7 +340,10 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr></thead>
+         <thead><tr>
+  <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>状態</th><th>工程</th><th>更新</th><th>更新者</th>
+</tr></thead>
           <tbody id="tbInv"></tbody>
         </table>
       </div>
@@ -350,7 +359,10 @@
       </header>
       <div class="table-wrap">
         <table class="table s">
-          <thead><tr><th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>状態</th><th>工程</th><th>更新</th><th>更新者</th></tr></thead>
+         <thead><tr>
+  <th>注番 / 得意先</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>状態</th><th>工程</th><th>更新</th><th>更新者</th>
+</tr></thead>
           <tbody id="tbFin"></tbody>
         </table>
       </div>
@@ -366,8 +378,10 @@
       <table class="table">
         <thead>
           <tr>
-            <th>注番</th><th>得意先</th><th>品名</th><th>品番</th><th>図番</th>
-            <th>数量</th><th>状態</th><th>更新</th>
+           <tr>
+  <th>注番</th><th>得意先</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+  <th>数量</th><th>状態</th><th>更新</th>
+</tr>
           </tr>
         </thead>
         <tbody id="tbShipped"></tbody>
@@ -382,6 +396,7 @@
       <header class="row-between"><h3><i class="fa-regular fa-file-lines"></i> 請求書作成</h3></header>
       <div class="grid">
         <input id="inv_customer" placeholder="得意先" list="dl_tokui">
+        <input id="inv_pos" placeholder="注番（複数可：空白/カンマ/改行）">
         <input id="inv_from" type="date" placeholder="期間自">
         <input id="inv_to" type="date" placeholder="期間至">
         <input id="inv_date" type="date" placeholder="請求日">
@@ -399,7 +414,10 @@
       <h3>請求明細（編集可：単価）</h3>
       <div class="table-wrap">
         <table class="table s" id="tblInv">
-          <thead><tr><th>#</th><th>品名</th><th>品番</th><th>図番</th><th>数量</th><th>単価</th><th>金額</th><th>注番</th><th>出荷ID</th></tr></thead>
+          <thead>
+  <tr><th>#</th><th>品名</th><th>品番</th><th>図番</th><th>機種</th><!-- NEW -->
+      <th>数量</th><th>単価</th><th>金額</th><th>注番</th><th>出荷ID</th></tr>
+</thead>
           <tbody id="invLines"></tbody>
           <tfoot>
             <tr><td colspan="5"></td><td class="muted">小計</td><td id="invSub">0</td><td colspan="2"></td></tr>
