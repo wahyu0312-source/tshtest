@@ -516,3 +516,51 @@ html,body{background:var(--bg); color:var(--text);}
   .badge{ font-size:.9rem; }
   #gridProc{ gap:.5rem; }
 }
+/* ==== Burger & Mobile Drawer ======================================= */
+.burger{
+  display:inline-flex; flex-direction:column; gap:4px;
+  width:40px; height:40px; align-items:center; justify-content:center;
+  border:1px solid var(--border, #334155); border-radius:12px;
+  background:var(--card, #0b1220); color:var(--text, #e5e7eb);
+}
+.burger span{ width:18px; height:2px; background:currentColor; border-radius:2px; }
+
+/* Drawer root: fixed full-viewport */
+.nav-drawer{ position:fixed; inset:0; z-index:9999; }
+.nav-drawer[hidden]{ display:none !important; }
+.nav-drawer .scrim{
+  position:absolute; inset:0; background:rgba(2,6,23,.45); backdrop-filter:saturate(140%) blur(2px);
+}
+.nav-drawer .panel{
+  position:absolute; top:0; bottom:0; left:0; width:min(88vw, 360px);
+  background:var(--panel, #0b1220); color:var(--text, #e5e7eb);
+  border-right:1px solid var(--border, #263043);
+  transform:translateX(-100%); transition:transform .22s ease-out;
+  padding: max(12px, env(safe-area-inset-top)) 14px 14px 14px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.nav-drawer.open .panel{ transform:none; }
+.nav-drawer.open .scrim{ animation: scrimIn .22s ease-out; }
+@keyframes scrimIn{ from { opacity:0 } to { opacity:1 } }
+
+/* Panel content */
+.panel-head{ display:flex; align-items:center; justify-content:space-between; }
+.panel-head .close{
+  font-size:22px; line-height:1; padding:.25rem .5rem; border-radius:10px;
+  border:1px solid var(--border, #334155); background:transparent; color:inherit;
+}
+.mnav{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.mnav .sep{ height:1px; background:var(--border,#334155); margin:.4rem 0; }
+.linklike{
+  width:100%; text-align:left; padding:.6rem .7rem; border-radius:12px; border:1px solid transparent;
+  background:rgba(148,163,184,.08); color:var(--text,#e5e7eb); font-weight:600;
+}
+.linklike:active{ background:rgba(148,163,184,.18); }
+.mnav details summary{ cursor:pointer; padding:.6rem .7rem; border-radius:10px; }
+.mnav details[open] summary{ background:rgba(148,163,184,.08); }
+
+@media (min-width: 1024px){
+  /* Desktop: burger & drawer tidak perlu */
+  .burger{ display:none; }
+  #mobileNav{ display:none !important; }
+}
