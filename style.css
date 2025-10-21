@@ -286,3 +286,107 @@ body {
 }
 .okng-inline .btn-ok { background:#eaffea; border-color:#b7efb7; }
 .okng-inline .btn-ng { background:#ffecec; border-color:#ffb3b3; }
+/* ===== Mobile-friendly dark theme + higher contrast ===== */
+:root{
+  --bg:#0b1220;         /* background utama */
+  --card:#0f172a;       /* kartu/panel */
+  --text:#e6eef7;       /* teks utama */
+  --muted:#9fb0c7;      /* teks sekunder */
+  --border:#1e2a44;     /* garis halus */
+  --accent:#3b82f6;     /* biru aksen */
+  --accent-2:#22c55e;   /* hijau aksen */
+  --chip:#111827;       /* chip/pill bg */
+}
+
+html,body{background:var(--bg); color:var(--text);}
+
+.card{background:var(--card)!important;border:1px solid var(--border)!important;
+  box-shadow:0 10px 24px rgba(2,6,23,.25)!important;border-radius:14px}
+
+/* Nav bar */
+.nav{background:rgba(10,16,28,.7);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border)}
+.brand{color:var(--text);opacity:.92}
+
+/* Weather pill terlihat jelas di dark */
+.wx-pill{background:linear-gradient(180deg,#0f172a, #0b1220)!important;
+  color:#dbe6f6!important;border-color:#24314f!important}
+.wx-dot{background:#60a5fa}
+
+/* Tombol */
+.btn{border-radius:10px}
+.btn.primary{background:var(--accent)!important;color:#fff!important;border:none}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{color:var(--text)!important;background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.12)!important}
+.btn.ghost:hover{background:rgba(255,255,255,.12)!important}
+
+.menu{background:var(--card);border:1px solid var(--border)}
+.menu .menu-item{color:var(--text)}
+.menu .menu-item:hover{background:rgba(255,255,255,.06)}
+
+/* Input/Select */
+.input, input, select, textarea{
+  background:#0b1220!important;color:var(--text)!important;
+  border:1px solid var(--border)!important;border-radius:10px
+}
+input::placeholder, textarea::placeholder{color:#9fb0c7}
+
+/* Table: header lebih kontras, baris rapi untuk HP */
+.table{color:var(--text)}
+.table th{background:#0c1322;color:#d6e3f8;border-bottom:1px solid var(--border)}
+.table td{border-top:1px solid #14203a}
+.table-wrap{border:1px solid var(--border);border-radius:12px}
+
+/* Badge/Status dengan kontras tinggi */
+.badge{display:inline-flex;align-items:center;gap:.4rem;padding:.15rem .5rem;
+  border-radius:999px;font-weight:700;border:1px solid rgba(255,255,255,.1)}
+.badge .dot{width:.45rem;height:.45rem;border-radius:50%}
+.st-begin{background:#182235;color:#bfe1ff}
+.st-inspect{background:#1b2b18;color:#c7f9cc}
+.st-hold{background:#2a1b1b;color:#ffc9c9}
+.st-ready{background:#1c2437;color:#cfe3ff}
+.st-shipped{background:#10251b;color:#b9f6d0}
+.st-ng{background:#2d1616;color:#ffd0d0}
+
+/* Proses badge */
+[class^="prc-"], [class*=" prc-"]{background:#161f2d;color:#cfe0ff}
+
+/* Grid chips di dashboard */
+.grid-chips .grid-chip{
+  background:linear-gradient(180deg,#0f172a,#0b1220);
+  border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem
+}
+
+/* Chart cards */
+.chart-card{background:var(--card)!important;border:1px solid var(--border)!important}
+
+/* ===== Responsive tweaks untuk smartphone ===== */
+@media (max-width: 640px){
+  /* nav: tombol jadi scroll horizontal agar tidak ketumpuk */
+  .nav-right{display:flex;gap:.4rem;overflow-x:auto;padding:.25rem .4rem}
+  .nav-right .btn{white-space:nowrap;flex:0 0 auto;padding:.45rem .6rem;font-size:.85rem}
+  .brand{font-size:.95rem}
+
+  /* container padding sedikit diperkecil */
+  .container{padding:0 .6rem}
+
+  /* kartu & judul */
+  h2,h3{font-size:1rem}
+  .card{padding:.75rem}
+
+  /* tabel: ukuran font dan cell lebih rapat, tetap bisa scroll */
+  .table{font-size:.9rem}
+  .table td,.table th{padding:.45rem .5rem}
+
+  /* form grid: 2 kolom → 1 kolom */
+  .grid, .grid-3{grid-template-columns:1fr !important}
+  #chartsGrid{grid-template-columns:1fr !important}
+}
+
+/* Perbaiki link/labeI yang terlalu redup di dark */
+a.link{color:#93c5fd}
+a.link:hover{color:#bfdbfe}
+
+/* Corner credit agar tak mengganggu di HP */
+.corner-brand{opacity:.55;color:#9fb0c7}
