@@ -632,3 +632,145 @@ input:invalid{ border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.18); 
 
 /* Responsif: sentuhan nyaman di mobile */
 input, select, textarea{ min-height: 44px; }
+/* ================== THEME TOKENS (tambahan) ================== */
+:root{
+  /* Aksen utama & teksnya (kontras tinggi) */
+  --primary: #3b82f6;            /* Blue 500 */
+  --on-primary: #ffffff;
+
+  /* Status colors (aksesibilitas) */
+  --ok:    #16a34a;  --on-ok:    #ffffff; /* green-600 */
+  --info:  #0ea5e9;  --on-info:  #0b1220; /* sky-500 on near-white */
+  --warn:  #f59e0b;  --on-warn:  #0b1220; /* amber-500 */
+  --err:   #ef4444;  --on-err:   #ffffff; /* red-500 */
+
+  /* Ring & shadow util */
+  --ring: rgba(59,130,246,.28);
+  --ring-strong: rgba(59,130,246,.42);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ring: rgba(59,130,246,.35);
+    --ring-strong: rgba(59,130,246,.55);
+  }
+}
+
+/* ================== FORM UTILITIES ================== */
+.form-row{ display:flex; gap:.75rem; flex-wrap:wrap; }
+.form-col{ flex:1 1 220px; min-width: 220px; }
+.labeled>label{
+  display:block; margin:0 0 .35rem; font-size:.875rem;
+  color: color-mix(in srgb, var(--input-fg) 72%, transparent);
+}
+
+/* Konsistensi kontrol */
+input, select, textarea{
+  background: var(--input-bg) !important;
+  color: var(--input-fg) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 12px;
+  padding: .65rem .8rem;
+  min-height: 44px;
+  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease;
+}
+input::placeholder, textarea::placeholder{ color: var(--input-ph); }
+input:hover, select:hover, textarea:hover{
+  border-color: color-mix(in oklab, var(--input-border) 40%, #3b82f6 20%);
+}
+input:focus, select:focus, textarea:focus{
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Invalid / Required */
+input:invalid, select:invalid, textarea:invalid{
+  border-color: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 35%, transparent);
+}
+.required > label::after{ content:" *"; color: var(--err); }
+
+/* Disabled */
+input:disabled, select:disabled, textarea:disabled{
+  opacity:.7; cursor:not-allowed;
+}
+
+/* Autofill (Chrome/Safari mobile) */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill{
+  -webkit-text-fill-color: var(--input-fg) !important;
+  transition: background-color 9999s ease-out;
+}
+input:-webkit-autofill{
+  box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+  border-color: var(--input-border) !important;
+}
+
+/* ================== BUTTONS ================== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:.5rem; padding:.62rem .9rem; min-height: 40px;
+  border-radius: 12px; border:1px solid transparent; font-weight:600;
+  transition: transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+  user-select:none; cursor:pointer;
+}
+.btn:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring-strong); }
+.btn:active{ transform: translateY(1px); }
+
+/* Variants */
+.btn--primary{
+  background: var(--primary); color: var(--on-primary);
+  border-color: color-mix(in oklab, var(--primary) 60%, #000 20%);
+}
+.btn--primary:hover{ filter: brightness(1.06); }
+.btn--ghost{
+  background: transparent;
+  color: var(--input-fg);
+  border-color: color-mix(in oklab, var(--input-border) 70%, var(--primary) 25%);
+}
+.btn--ghost:hover{
+  background: color-mix(in srgb, var(--input-bg) 70%, var(--primary) 8%);
+  border-color: var(--primary);
+}
+
+/* Full width on small screens */
+@media (max-width: 480px){
+  .btn{ width:100%; }
+}
+
+/* ================== BADGES / STATUS ================== */
+.badge{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.25rem .55rem; border-radius:999px; font-size:.78rem;
+  border:1px solid transparent; white-space:nowrap;
+}
+.badge.-ok   { background: color-mix(in srgb, var(--ok) 16%, transparent);
+               color: var(--on-ok); border-color: color-mix(in oklab, var(--ok) 40%, transparent); }
+.badge.-info { background: color-mix(in srgb, var(--info) 16%, transparent);
+               color: var(--on-info); border-color: color-mix(in oklab, var(--info) 40%, transparent); }
+.badge.-warn { background: color-mix(in srgb, var(--warn) 18%, transparent);
+               color: var(--on-warn); border-color: color-mix(in oklab, var(--warn) 42%, transparent); }
+.badge.-err  { background: color-mix(in srgb, var(--err) 20%, transparent);
+               color: var(--on-err); border-color: color-mix(in oklab, var(--err) 50%, transparent); }
+
+/* ================== INPUT GROUP (ikon di dalam input) ================== */
+.input-icon{
+  position:relative; display:flex; align-items:center;
+}
+.input-icon > svg, .input-icon > i{
+  position:absolute; left:.65rem; font-size:1rem;
+  color: color-mix(in srgb, var(--input-ph) 90%, transparent);
+  pointer-events:none;
+}
+.input-icon > input{ padding-left: 2rem; }
+
+/* ================== TABLE FILTER (jika ada) ================== */
+.table-filter input{
+  background: var(--input-bg) !important;
+  color: var(--input-fg) !important;
+  border-color: var(--input-border) !important;
+}
+.table-filter input:focus{
+  border-color: var(--primary) !important; box-shadow:0 0 0 3px var(--ring);
+}
