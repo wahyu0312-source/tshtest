@@ -1,62 +1,66 @@
 /* =========================================================
  * sw.js — Service Worker (Offline + Performance)
- * - Cache-first untuk assets (HTML/CSS/JS/Fonts/Icons) => SWR
+ * - Cache-first (SWR) untuk assets same-origin
  * - TIDAK mencegat request cross-origin (Apps Script & CDN)
  * ========================================================= */
-const SW_VERSION  = 'tsh-erp-v5';            // bump version to update clients
-const ASSET_CACHE = `${SW_VERSION}-assets`;
-const API_CACHE   = `${SW_VERSION}-api`;     // (tersisa untuk future use)
+const SW_VERSION   = 'tsh-erp-v6';          // bump version to update clients
+const ASSET_CACHE  = `${SW_VERSION}-assets`;
+const API_CACHE    = `${SW_VERSION}-api`;   // reserved (tidak dipakai skrg)
 
-// Core assets same-origin (eksternal akan di-fetch normal oleh browser)
+// Samakan versi dengan yang di index.html ?v=...
+const APP_JS_VERSION = '2025-10-21-03';
+
+// Precache hanya aset same-origin yang pasti ada
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css',
-  './app.js',
+  `./app.js?v=${APP_JS_VERSION}`,
   './assets/tsh.png',
-  // CATATAN: item eksternal sengaja tidak dimasukkan ke cache install
-  // agar instalasi tidak gagal karena request opaque.
+  // Catatan: JANGAN masukkan CDN/cross-origin ke sini
 ];
 
-self.addEventListener('install', (e)=>{
+self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(ASSET_CACHE).then(cache => cache.addAll(CORE_ASSETS)).catch(()=>{})
+    caches.open(ASSET_CACHE)
+      .then(cache => cache.addAll(CORE_ASSETS))
+      .catch(() => {}) // abaikan error opaque, dll.
   );
 });
 
-self.addEventListener('activate', (e)=>{
+self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => ![ASSET_CACHE, API_CACHE].includes(k)).map(k => caches.delete(k))
-    ))
+    caches.keys().then(keys =>
+      Promise.all(keys
+        .filter(k => ![ASSET_CACHE, API_CACHE].includes(k))
+        .map(k => caches.delete(k))
+      )
+    )
   );
   self.clients.claim();
 });
 
 // HANYA tangani request same-origin + GET (static assets)
-self.addEventListener('fetch', (e)=>{
+self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
 
-  // 1) Biarkan semua request cross-origin berjalan langsung ke network
-  //    (Apps Script JSONP, CDN Chart.js, FontAwesome, SheetJS, dll)
+  // Biarkan SEMUA cross-origin langsung ke network (Apps Script JSONP, CDN, dll)
   if (url.origin !== self.location.origin) return;
 
-  // 2) Hanya GET yang dicache
+  // Hanya GET yang dicache
   if (req.method !== 'GET') return;
 
-  // 3) Stale-While-Revalidate untuk assets same-origin
-  e.respondWith((async ()=>{
+  // Stale-While-Revalidate untuk assets same-origin
+  e.respondWith((async () => {
     const cache  = await caches.open(ASSET_CACHE);
     const cached = await cache.match(req);
 
-    const fetchPromise = fetch(req).then(net=>{
-      // simpan versi terbaru (abaikan jika gagal)
+    const fetchPromise = fetch(req).then(net => {
       cache.put(req, net.clone());
       return net;
-    }).catch(()=>{
-      // kalau fetch gagal dan tidak ada cache → tetap balas response valid
+    }).catch(() => {
       if (cached) return cached;
       return new Response('', { status: 504, statusText: 'Gateway Timeout' });
     });
