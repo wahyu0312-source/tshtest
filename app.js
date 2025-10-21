@@ -1570,19 +1570,43 @@ function _bestTextColor(hex){
   return yiq>=150 ? '#0f172a' : '#ffffff';
 }
 function applyBackground(hex){
-  const fg=_bestTextColor(hex);
-  const root=document.documentElement;
+  const fg = _bestTextColor(hex);          // otomatis: bg terang → teks gelap, bg gelap → teks terang
+  const isDark = (fg === '#ffffff');
+
+  // Turunan warna UI inti
+  const root = document.documentElement;
   root.style.setProperty('--bg', hex);
   root.style.setProperty('--fg', fg);
-  root.style.setProperty('--muted', fg==='#ffffff' ? 'rgba(255,255,255,.75)' : 'rgba(15,23,42,.70)');
-  root.style.setProperty('--card', fg==='#ffffff' ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)');
-  root.style.setProperty('--border', fg==='#ffffff'
+  root.style.setProperty('--muted', isDark ? 'rgba(255,255,255,.75)' : 'rgba(15,23,42,.70)');
+  root.style.setProperty('--card',  isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)');
+  root.style.setProperty('--border', isDark
     ? 'color-mix(in oklab, #fff 18%, transparent)'
     : 'color-mix(in oklab, #0f172a 18%, transparent)');
-  const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', hex);
+
+  // Warna khusus input (lebih jelas & nyaman dipakai)
+  const inputBg = isDark
+    ? `color-mix(in srgb, ${hex} 82%, #fff 18%)`
+    : `color-mix(in srgb, ${hex} 90%, #000 2%)`;
+  const inputBorder = isDark
+    ? 'color-mix(in oklab, #fff 22%, transparent)'
+    : 'color-mix(in oklab, #0f172a 22%, transparent)';
+  const inputPh = isDark ? 'color-mix(in srgb, #fff 60%, transparent)'
+                         : 'color-mix(in srgb, #0f172a 55%, transparent)';
+  const focusRing = isDark ? 'rgba(59,130,246,.35)' : 'rgba(59,130,246,.25)';
+
+  root.style.setProperty('--input-bg', inputBg);
+  root.style.setProperty('--input-fg', fg);
+  root.style.setProperty('--input-border', inputBorder);
+  root.style.setProperty('--input-ph', inputPh);
+  root.style.setProperty('--input-focus', focusRing);
+
+  // meta theme color (mobile chrome)
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', hex);
+
   try{ localStorage.setItem('UI_THEME_BG', hex); }catch{}
 }
+
 (function bootTheme(){
   window.addEventListener('DOMContentLoaded', ()=>{
     const saved=localStorage.getItem('UI_THEME_BG');
