@@ -577,3 +577,58 @@ html,body{background:var(--bg); color:var(--text);}
   --ink: var(--fg);   /* agar color:var(--ink) ikut warna teks utama */
   --text: var(--fg);  /* ada beberapa blok pakai --text, samakan ke --fg */
 }
+/* === Input color system (kontras otomatis & responsif) ================ */
+/* Default (akan dioverride oleh JS theme picker bila dipakai) */
+:root{
+  --input-bg:     color-mix(in srgb, var(--bg) 88%, #fff 12%);
+  --input-fg:     var(--fg);
+  --input-border: color-mix(in oklab, var(--fg) 18%, transparent);
+  --input-ph:     color-mix(in srgb, var(--fg) 55%, transparent);
+  --input-focus:  rgba(59,130,246,.28);  /* ring focus biru */
+}
+
+/* Mode gelap via prefers-color-scheme (fallback bila JS tidak jalan) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --input-bg:     color-mix(in srgb, var(--bg) 82%, #fff 18%);
+    --input-fg:     var(--fg);
+    --input-border: color-mix(in oklab, #fff 22%, transparent);
+    --input-ph:     color-mix(in srgb, #fff 60%, transparent);
+    --input-focus:  rgba(59,130,246,.35);
+  }
+}
+
+/* Terapkan ke semua field */
+input, select, textarea{
+  background: var(--input-bg) !important;
+  color: var(--input-fg) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 12px;
+  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+input::placeholder, textarea::placeholder{ color: var(--input-ph); }
+
+/* Hover: sedikit naikkan kontras border */
+input:hover, select:hover, textarea:hover{
+  border-color: color-mix(in oklab, var(--input-border) 40%, #3b82f6 20%);
+}
+
+/* Focus: ring jelas + border biru */
+input:focus, select:focus, textarea:focus{
+  outline: none;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px var(--input-focus);
+}
+
+/* State invalid/disabled yang tetap nyaman dibaca */
+input:disabled, select:disabled, textarea:disabled{
+  opacity: .7;
+  cursor: not-allowed;
+}
+input:invalid{ border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.18); }
+
+/* Komponen kecil di form (badge, label, hint) tetap kontras */
+.labeled>label{ color: color-mix(in srgb, var(--input-fg) 72%, transparent); }
+
+/* Responsif: sentuhan nyaman di mobile */
+input, select, textarea{ min-height: 44px; }
