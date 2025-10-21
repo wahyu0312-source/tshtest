@@ -33,7 +33,9 @@
 }
 
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:var(--fs-base)/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:var(--fs-base)/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.nav{ color:var(--fg); }
+
 .hidden{display:none!important}
 .muted{color:var(--muted)}
 .s{font-size:var(--fs-s)}
@@ -431,6 +433,12 @@ html,body{background:var(--bg); color:var(--text);}
   .nav-right details.dropdown-inline{width:100%}
   .nav-right details[open] .menu{position:relative; inset:auto; right:auto}
 }
+.nav-drawer .panel{
+  background:var(--card);
+  color:var(--fg);
+  border-right:1px solid var(--border);
+}
+.mnav .linklike{ color:var(--fg); }
 
 /* ===== Theme palette grid (dialog) ===== */
 .theme-grid{
@@ -563,4 +571,9 @@ html,body{background:var(--bg); color:var(--text);}
   /* Desktop: burger & drawer tidak perlu */
   .burger{ display:none; }
   #mobileNav{ display:none !important; }
+}
+/* === VAR ALIAS (tempel di paling akhir style.css) === */
+:root{
+  --ink: var(--fg);   /* agar color:var(--ink) ikut warna teks utama */
+  --text: var(--fg);  /* ada beberapa blok pakai --text, samakan ke --fg */
 }
