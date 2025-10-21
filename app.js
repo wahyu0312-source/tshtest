@@ -1649,6 +1649,53 @@ function initBurger(){
     initBurger();
   });
 })();
+/* ===== Mobile Burger / Drawer ===================================== */
+(function(){
+  const nav   = document.getElementById('mobileNav');
+  const btn   = document.getElementById('btnBurger');
+  if(!nav || !btn) return;
+
+  const panel = nav.querySelector('.panel');
+  const scrim = nav.querySelector('.scrim');
+
+  function openNav(){
+    nav.hidden = false;
+    // next frame biar transition jalan
+    requestAnimationFrame(()=> nav.classList.add('open'));
+    btn.setAttribute('aria-expanded','true');
+    // Lock scroll body
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function closeNav(){
+    nav.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+    document.documentElement.style.overflow = '';
+    // hide setelah animasi
+    setTimeout(()=>{ nav.hidden = true; }, 220);
+  }
+  function toggle(){ (nav.hidden || !nav.classList.contains('open')) ? openNav() : closeNav(); }
+
+  btn.addEventListener('click', toggle, {passive:true});
+  nav.addEventListener('click', (e)=>{
+    const t = e.target;
+    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); }
+    // Klik item → trigger tombol topbar aslinya via id di data-go
+    if (t && t.matches('[data-go]')){
+      const id = t.getAttribute('data-go');
+      const realBtn = document.getElementById(id);
+      if (realBtn) realBtn.click();
+      closeNav();
+    }
+  }, {passive:true});
+
+  // ESC to close
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && nav.classList.contains('open')) closeNav(); });
+
+  // Auto-disable saat landscape/desktop
+  window.addEventListener('resize', ()=>{
+    if (window.innerWidth >= 1024 && !nav.hidden) closeNav();
+  });
+})();
 
 /* ===== Service Worker register ===== */
 if ("serviceWorker" in navigator) {
