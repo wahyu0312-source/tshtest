@@ -1608,25 +1608,74 @@ function applyBackground(hex){
 })();
 
 /* ===== Mobile Burger / Drawer ===================================== */
-(function(){
-  const nav   = document.getElementById('mobileNav');
-  const btn   = document.getElementById('btnBurger');
-  if(!nav || !btn) return;
+(() => {
+  const nav = document.getElementById('mobileNav');
+  const btn = document.getElementById('btnBurger');
+  if (!nav || !btn) return;
 
-  const panel = nav.querySelector('.panel');
-  const scrim = nav.querySelector('.scrim');
-/* ===== Mobile Burger / Drawer ===================================== */
-(function(){
-  ...
-  nav.addEventListener('click', (e)=>{
+  function openNav() {
+    nav.hidden = false;
+    requestAnimationFrame(() => nav.classList.add('open')); // biar animasi jalan
+    btn.setAttribute('aria-expanded', 'true');
+    document.documentElement.style.overflow = 'hidden';      // lock scroll
+  }
+
+  function closeNav() {
+    nav.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    document.documentElement.style.overflow = '';
+    setTimeout(() => { nav.hidden = true; }, 220);           // setelah animasi
+  }
+
+  function toggle() {
+    (nav.hidden || !nav.classList.contains('open')) ? openNav() : closeNav();
+  }
+
+  btn.addEventListener('click', toggle, { passive: true });
+
+  // Klik di dalam drawer
+  nav.addEventListener('click', (e) => {
     const t = e.target;
-    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) { closeNav(); }
-    // Klik item → trigger tombol topbar aslinya via id di data-go
-    if (t && t.matches('[data-go]')){
-      ...
+
+    // Tutup bila klik elemen yang bertanda data-close
+    if (t && (t.hasAttribute('data-close') || t.closest('[data-close]'))) {
+      closeNav(); 
+      return;
     }
-  }, {passive:true});
-  ...
+
+    // Navigasi: mirror tombol topbar, pakai id di data-go
+    const go = t && t.closest('[data-go]');
+    if (go) {
+      const id = go.getAttribute('data-go');
+      const realBtn = document.getElementById(id);
+      if (realBtn) realBtn.click();
+      closeNav();
+      return;
+    }
+
+    // Actions di 設定
+    const act = t && t.closest('[data-act]');
+    if (act) {
+      const m = act.getAttribute('data-act');
+      if (m === 'stationQR')  openStationQR();
+      if (m === 'addUser')    openAddUserModal();
+      if (m === 'changePass') changePasswordUI();
+      if (m === 'theme')      document.getElementById('miTheme')?.click();
+      if (m === 'logout') { SESSION=null; localStorage.removeItem('erp_session'); location.reload(); }
+      closeNav();
+      return;
+    }
+  }, { passive: true });
+
+  // ESC untuk menutup
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav.classList.contains('open')) closeNav();
+  });
+
+  // Otomatis tutup saat lebar desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024 && !nav.hidden) closeNav();
+  });
 })();
 
   function openNav(){
