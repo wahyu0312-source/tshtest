@@ -863,3 +863,66 @@ dialog::backdrop{ background: transparent !important; }     /* jika menu pakai <
   border: 1px solid rgba(2,6,23,.10);
 }
 .dropdown-menu .btn:hover{ background: #e2e8f0; }
+/* === FIX: scope theme & bersihkan menu gelap (drop-in) ================= */
+
+/* 0) Pastikan var teks ada */
+:root { --fg: #0b1220; }
+@media (prefers-color-scheme: dark){ :root{ --fg:#e5e7eb; } }
+
+/* 1) Default LIGHT → override blok dark tak ter-scope di atas */
+:root:not([data-theme="dark"]) {
+  --bg:#f7f9fc; --card:#ffffff; --border:#e0e6f1; --fg:#0b1220; --muted:#6b7a99;
+  /* chip/pill & surface lain balik cerah */
+  --chip:#ffffff;
+}
+:root:not([data-theme="dark"]) body{ background:var(--bg); color:var(--fg); }
+
+/* 2) DARK hanya bila ada atribut [data-theme="dark"] pada <html> / <body> */
+:root[data-theme="dark"]{
+  --bg:#0b1220; --card:#0f172a; --border:#1f2b46;
+  --text:#e6eef7; --muted:#9fb0c7; --accent:#3b82f6; --accent-2:#22c55e; --chip:#111827;
+}
+[data-theme="dark"] body{ background:var(--bg); color:var(--text,#e6eef7); }
+
+/* 3) Menu/Dropdown SELALU cerah & kontras di tema terang */
+:root:not([data-theme="dark"]) .dropdown-inline .menu,
+:root:not([data-theme="dark"]) .dropdown-menu,
+:root:not([data-theme="dark"]) .menu,
+:root:not([data-theme="dark"]) [role="menu"]{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border:1px solid rgba(2,6,23,.12) !important;
+  box-shadow:0 8px 24px rgba(2,6,23,.06), 0 2px 6px rgba(2,6,23,.04) !important;
+  border-radius:14px !important;
+}
+:root:not([data-theme="dark"]) .dropdown-menu .item,
+:root:not([data-theme="dark"]) [role="menu"] [role="menuitem"],
+:root:not([data-theme="dark"]) .menu .menu-item{
+  color:#0b1220 !important;
+  border-radius:10px;
+}
+:root:not([data-theme="dark"]) .dropdown-menu .item:hover,
+:root:not([data-theme="dark"]) [role="menu"] [role="menuitem"]:hover,
+:root:not([data-theme="dark"]) .menu .menu-item:hover{
+  background: color-mix(in srgb, #3b82f6 10%, #f8fafc 90%);
+}
+
+/* 4) Hilangkan efek gelap/backdrop pada Setting menu */
+.menu-backdrop, [data-menu-backdrop], .dropdown-backdrop,
+dialog::backdrop{ background: transparent !important; backdrop-filter: none !important; }
+
+/* 5) Input/“search pill” yang masih hitam → paksa terang di light */
+:root:not([data-theme="dark"]) .table-filter input,
+:root:not([data-theme="dark"]) .input,
+:root:not([data-theme="dark"]) input,
+:root:not([data-theme="dark"]) select,
+:root:not([data-theme="dark"]) textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border:1px solid #e0e6f1 !important;
+}
+
+/* 6) Tap-target tetap nyaman di ponsel */
+@media (max-width:480px){
+  .dropdown-menu .item, [role="menu"] [role="menuitem"], .menu .menu-item{ min-height:44px; }
+}
