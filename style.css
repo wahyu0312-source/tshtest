@@ -926,3 +926,92 @@ dialog::backdrop{ background: transparent !important; backdrop-filter: none !imp
 @media (max-width:480px){
   .dropdown-menu .item, [role="menu"] [role="menuitem"], .menu .menu-item{ min-height:44px; }
 }
+/* === MOBILE BURGER/DRAWER CONTRAST FIX ================================== */
+/* LIGHT mode (default): panel & item serba terang dan jelas */
+@media (max-width:760px){
+  :root:not([data-theme="dark"]) .nav-right{
+    background:#ffffff !important;
+    color:#0b1220 !important;
+    border-left:1px solid #e6ecf5 !important;
+    box-shadow:-14px 0 28px rgba(2,6,23,.10) !important;
+  }
+  /* tombol dalam drawer */
+  :root:not([data-theme="dark"]) .nav-right .btn{
+    background:#f1f5f9 !important; color:#0b1220 !important;
+    border:1px solid #e2e8f0 !important;
+  }
+  :root:not([data-theme="dark"]) .nav-right .btn:hover{ background:#e2e8f0 !important; }
+
+  /* section "設定" (details + summary) & menu dropdown di dalam drawer */
+  :root:not([data-theme="dark"]) .nav-right details > summary{ color:#0b1220 !important; }
+  :root:not([data-theme="dark"]) .nav-right .menu,
+  :root:not([data-theme="dark"]) .nav-right .dropdown-menu,
+  :root:not([data-theme="dark"]) .nav-right [role="menu"]{
+    position:relative; inset:auto; right:auto;
+    background:#ffffff !important; color:#0b1220 !important;
+    border:1px solid #e6ecf5 !important;
+    box-shadow:0 8px 24px rgba(2,6,23,.08), 0 2px 6px rgba(2,6,23,.04) !important;
+    border-radius:12px !important;
+  }
+  :root:not([data-theme="dark"]) .nav-right .menu .menu-item,
+  :root:not([data-theme="dark"]) .nav-right [role="menu"] [role="menuitem"],
+  :root:not([data-theme="dark"]) .nav-right .dropdown-menu .item{
+    color:#0b1220 !important; border-radius:10px;
+  }
+  :root:not([data-theme="dark"]) .nav-right .menu .menu-item:hover,
+  :root:not([data-theme="dark"]) .nav-right [role="menu"] [role="menuitem"]:hover,
+  :root:not([data-theme="dark"]) .nav-right .dropdown-menu .item:hover{
+    background:color-mix(in srgb, #3b82f6 10%, #f8fafc 90%) !important;
+  }
+
+  /* garis pemisah di drawer */
+  :root:not([data-theme="dark"]) .nav-right .menu-sep,
+  :root:not([data-theme="dark"]) .nav-right .dropdown-divider,
+  :root:not([data-theme="dark"]) .nav-right [role="separator"]{
+    height:1px; background:rgba(2,6,23,.12) !important;
+  }
+}
+
+/* DARK mode (opsional): tetap kontras tinggi */
+@media (max-width:760px){
+  :root[data-theme="dark"] .nav-right{
+    background:#0f172a !important; color:#e5e7eb !important;
+    border-left:1px solid #1f2b46 !important;
+    box-shadow:-14px 0 28px rgba(0,0,0,.35) !important;
+  }
+  :root[data-theme="dark"] .nav-right .btn{
+    background:rgba(255,255,255,.06) !important; color:#e5e7eb !important;
+    border:1px solid rgba(255,255,255,.14) !important;
+  }
+  :root[data-theme="dark"] .nav-right .menu,
+  :root[data-theme="dark"] .nav-right .dropdown-menu,
+  :root[data-theme="dark"] .nav-right [role="menu"]{
+    background:#111827 !important; color:#e5e7eb !important;
+    border:1px solid #263245 !important;
+    box-shadow:0 10px 28px rgba(0,0,0,.45) !important;
+  }
+  :root[data-theme="dark"] .nav-right .menu .menu-item:hover,
+  :root[data-theme="dark"] .nav-right [role="menu"] [role="menuitem"]:hover,
+  :root[data-theme="dark"] .nav-right .dropdown-menu .item:hover{
+    background:rgba(255,255,255,.08) !important;
+  }
+  :root[data-theme="dark"] .nav-right .menu-sep,
+  :root[data-theme="dark"] .nav-right .dropdown-divider,
+  :root[data-theme="dark"] .nav-right [role="separator"]{
+    height:1px; background:rgba(255,255,255,.12) !important;
+  }
+}
+
+/* Hilangkan overlay gelap di belakang drawer/menu pada mobile */
+.nav-drawer .scrim,
+.menu-backdrop, [data-menu-backdrop], .dropdown-backdrop, dialog::backdrop{
+  background: transparent !important; backdrop-filter: none !important;
+}
+
+/* Jaga keterbacaan ikon di item menu */
+.nav-right .menu i, .nav-right .menu svg{ opacity:.9; color:inherit; }
+
+/* Tap target nyaman */
+@media (max-width:760px){
+  .nav-right .menu .menu-item{ min-height:44px; }
+}
